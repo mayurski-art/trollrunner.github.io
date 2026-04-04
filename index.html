@@ -3,95 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧌 Troll Runner</title>
+    <title>Troll Runner</title>
     <style>
         body {
-            background: linear-gradient(to right, pink, blue);
             font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom right, pink, blue);
+            margin: 0;
+            padding: 20px;
+            color: white;
         }
         header {
             text-align: center;
             padding: 20px;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
         #map {
             height: 400px;
-            margin-top: 20px;
+            width: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid white;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: rgba(255, 255, 255, 0.2);
         }
         .stats {
             display: flex;
-            justify-content: space-around;
+            justify-content: space-between;
             margin: 20px 0;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 8px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
         }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 <body>
-<header>
-    <h1>🧌 Troll Runner</h1>
-</header>
-<div class="container">
-    <section>
+    <header>
+        <h1>🧌 Troll Runner</h1>
+    </header>
+    <section id="biography">
         <h2>Biography</h2>
-        <p>Your biography goes here...</p>
+        <p>This is a tracker for stickers located across various cities, featuring an interactive map and detailed information about each location. Over time the intention is to develop stronger user interface.</p>
     </section>
-    <section>
-        <div class='stats'>
-            <div>Total Stickers: 77</div>
-            <div>Cities Visited: 5</div>
-            <div>Date Range: Your date range here...</div>
-        </div>
+    <div id="map"></div>
+    <section id="stats" class="stats">
+        <div>Total Stickers: <strong>77</strong></div>
+        <div>Cities Visited: <strong>5</strong></div>
     </section>
-    <section>
-        <h2>Locations</h2>
-        <table id="data-table" border="1">
-            <thead>
-                <tr>
-                    <th>City</th>
-                    <th>State</th>
-                    <th>Stickers</th>
-                </tr>
-            </thead>
-            <tbody>
-               <!-- Data Rows Generated Here -->
-            </tbody>
-        </table>
-    </section>
-    <section id="map"></section>
-</div>
-<script>
-    // Initialize the map
-    var map = L.map('map').setView([37.7749, -122.4194], 5);
+    <table id="sticker-locations">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">City</th>
+                <th onclick="sortTable(1)">Location</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Fontana</td><td>Beech Ave</td></tr>
+            <tr><td>Fontana</td><td>Koehler Park</td></tr>
+            <tr><td>Fontana</td><td>Almeria Park</td></tr>
+            <tr><td>Fontana</td><td>Ralph M. Lewis Sports Complex</td></tr>
+            <tr><td>Fontana</td><td>Sierra Lakes Golf Club</td></tr>
+            <tr><td>Fontana</td><td>Patricia Marrujo Park</td></tr>
+            <tr><td>Fontana</td><td>Coyote Canyon Park</td></tr>
+            <tr><td>Fontana</td><td>Hunter's Ridge Park</td></tr>
+            <tr><td>Fontana</td><td>Manitoba Drive</td></tr>
+            <tr><td>Fontana</td><td>N Bridlepath Drive</td></tr>
+            <tr><td>Fontana</td><td>Foxborough Drive</td></tr>
+            <tr><td>Fontana</td><td>Alec Fergusson Park</td></tr>
+            <tr><td>Fontana</td><td>Central City Park</td></tr>
+            <tr><td>Fontana</td><td>Seville Park</td></tr>
+            <tr><td>Fontana</td><td>Downtown Fontana</td></tr>
+            <tr><td>Riverside</td><td>Mount Rubidoux</td></tr>
+            <tr><td>Riverside</td><td>Senna Cross</td></tr>
+            <tr><td>Riverside</td><td>Ryan Bonamino Park</td></tr>
+            <tr><td>Riverside</td><td>Andulka Park</td></tr>
+            <tr><td>Riverside</td><td>Bordwell Park</td></tr>
+            <tr><td>Riverside</td><td>Dario Vasquez Park</td></tr>
+            <tr><td>Riverside</td><td>Lincoln Park</td></tr>
+            <tr><td>Riverside</td><td>Downtown Village</td></tr>
+            <tr><td>Riverside</td><td>University Village</td></tr>
+            <tr><td>Riverside</td><td>Hunter Park</td></tr>
+            <tr><td>Rancho Cucamonga</td><td>Red Hill Community Park</td></tr>
+            <tr><td>Rancho Cucamonga</td><td>Pacific Electric Trail Route 66 Trailhead</td></tr>
+            <tr><td>Rialto</td><td>Birdsall Park</td></tr>
+            <tr><td>Rialto</td><td>Bud Bender Park</td></tr>
+            <tr><td>Rialto</td><td>Jerry Eaves Park</td></tr>
+            <tr><td>Chino Hills</td><td>Butterfield Park</td></tr>
+        </tbody>
+    </table>
+    <footer>
+        <h3>Connect with us!</h3>
+        <a href="https://twitter.com">Twitter</a> | 
+    </footer>
+    <script>
+        function initMap() {
+            const map = L.map('map').setView([34.05, -117.5], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+            }).addTo(map);
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+            const locations = [
+                { city: 'Fontana', coords: [34.0922, -117.4350] },
+                { city: 'Riverside', coords: [33.9533, -117.3962] },
+                { city: 'Rancho Cucamonga', coords: [34.1064, -117.5931] },
+                { city: 'Rialto', coords: [34.1064, -117.3703] },
+                { city: 'Chino Hills', coords: [33.9872, -117.7253] }
+            ];
 
-    // City markers (example coordinates)
-    var markerData = [
-        { "city": "City1", "coords": [37.7749, -122.4194] },
-        { "city": "City2", "coords": [34.0522, -118.2437] },
-        { "city": "City3", "coords": [40.7128, -74.0060] },
-        { "city": "City4", "coords": [41.8781, -87.6298] },
-        { "city": "City5", "coords": [30.2672, -97.7431] }
-    ];
-
-    markerData.forEach(function(data) {
-        L.marker(data.coords).addTo(map)
-            .bindPopup(data.city);
-    });
-
-    // Fetch CSV data and populate the data table (not fully implemented here)
-    // Add functionality for searching and sorting the table
-</script>
+            locations.forEach(location => {
+                L.marker(location.coords).addTo(map)
+                    .bindPopup(location.city);
+            });
+        }
+        window.onload = initMap;
+    </script>
 </body>
 </html>
