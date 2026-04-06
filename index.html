@@ -425,7 +425,14 @@ footer a:hover { color: #fff; }
   </div>
 </section>
 
-
+<!-- Externalized Updates Section -->
+<div id="updates-container"></div>
+<script>
+  fetch('updates.html')
+    .then(res => res.text())
+    .then(html => document.getElementById('updates-container').innerHTML = html);
+</script>
+  
 <footer>
   <p>Connect with me on X &mdash; <a href="https://twitter.com/troll_runner" target="_blank">@troll_runner</a></p>
 </footer>
