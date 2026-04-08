@@ -310,6 +310,16 @@ header p {
   padding: 6px;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
+  min-height: 0;
+}
+#list-resizer {
+  display: none;
+  height: 10px;
+  cursor: row-resize;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.08), rgba(0,0,0,0.02), rgba(0,0,0,0.08));
+  border-top: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+  touch-action: none;
 }
 .loc-card {
   background: var(--bg-card);
@@ -573,9 +583,16 @@ footer a:hover { color: #fff; }
     border-bottom: 0.5px solid var(--border);
   }
   #panel-resizer { display: none; }
+  #list-resizer { display: block; }
 
   #map-wrap {
     min-height: 52vh;
+  }
+
+  #loc-list {
+    flex: 0 0 auto;
+    height: 26vh;
+    min-height: 120px;
   }
 
   #photo-panel {
@@ -658,6 +675,7 @@ footer a:hover { color: #fff; }
         <div class="sb-stat"><div class="v">5</div><div class="l">Cities</div></div>
       </div>
       <div id="city-tabs"></div>
+      <div id="list-resizer" aria-hidden="true" title="Drag to resize location list"></div>
       <div id="loc-list"></div>
     </div>
     <div id="panel-resizer" aria-hidden="true" title="Drag to resize panels"></div>
@@ -770,6 +788,9 @@ let markersLayer = null;
 let isResizingPanels = false;
 let resizeStartX = 0;
 let resizeStartWidth = 0;
+let isResizingList = false;
+let listResizeStartY = 0;
+let listResizeStartHeight = 0;
 const DATE_COUNTS = {};
 DATA.forEach(d => {
   d.isoDate = toIsoDate(d.date);
@@ -847,12 +868,49 @@ function initPanelResizer() {
   });
 }
 
+function initListResizer() {
+  const sidebar = document.getElementById('sidebar');
+  const list = document.getElementById('loc-list');
+  const resizer = document.getElementById('list-resizer');
+  if (!sidebar || !list || !resizer) return;
+
+  function onPointerMove(e) {
+    if (!isResizingList) return;
+    const delta = e.clientY - listResizeStartY;
+    const sidebarHeight = sidebar.getBoundingClientRect().height;
+    const maxHeight = Math.max(150, sidebarHeight - 120);
+    const next = Math.max(120, Math.min(maxHeight, listResizeStartHeight - delta));
+    list.style.height = `${next}px`;
+  }
+
+  function stopResize() {
+    if (!isResizingList) return;
+    isResizingList = false;
+    document.body.style.userSelect = '';
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', stopResize);
+  }
+
+  resizer.addEventListener('pointerdown', e => {
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    isResizingList = true;
+    listResizeStartY = e.clientY;
+    listResizeStartHeight = list.getBoundingClientRect().height;
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', stopResize);
+  });
+}
+
 function syncSidebarWidthForViewport() {
   const sidebar = document.getElementById('sidebar');
+  const list = document.getElementById('loc-list');
   if (!sidebar) return;
   if (window.matchMedia('(max-width: 900px)').matches) {
     sidebar.style.width = '';
     sidebar.style.minWidth = '';
+  } else if (list) {
+    list.style.height = '';
   }
 }
 
@@ -1133,7 +1191,7 @@ window.addEventListener('resize', ()=>{
   if (activeIdx !== null) positionPopup(DATA[activeIdx]);
 });
 
-initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); syncSidebarWidthForViewport();
+initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); initListResizer(); syncSidebarWidthForViewport();
 </script>
 </body>
 </html>
