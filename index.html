@@ -148,6 +148,17 @@ header p {
   color: var(--text-primary);
   letter-spacing: -0.3px;
 }
+#sidebar-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#calendar-toggle {
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+}
+#calendar-toggle:hover { background: var(--bg-card-hover); }
 #sidebar-header p {
   font-size: 11px;
   color: var(--text-secondary);
@@ -178,6 +189,65 @@ header p {
   transition: border-color 0.15s;
 }
 #search-box:focus { border-color: #007aff; }
+#date-filter {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--border);
+  background: #eef4ff;
+}
+#date-filter span { font-size: 11px; color: #2f3f6d; font-weight: 600; }
+#date-clear {
+  border: none;
+  background: #dce8ff;
+  color: #2f3f6d;
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+#calendar-panel {
+  display: none;
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--border);
+  background: #fbfbfd;
+}
+#calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+#calendar-head button {
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+#calendar-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+#calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-day {
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 7px;
+  font-size: 10px;
+  color: var(--text-primary);
+  padding: 5px 0;
+  text-align: center;
+  cursor: pointer;
+}
+.cal-day.has-drop { border-color: #9fb8ff; background: #edf3ff; }
+.cal-day.active { background: #007aff; color: white; border-color: #007aff; font-weight: 700; }
+.cal-empty { height: 24px; }
+.cal-dow { font-size: 9px; color: var(--text-secondary); text-align: center; padding-bottom: 2px; }
 
 #sb-stats {
   display: flex;
@@ -466,7 +536,10 @@ footer a:hover { color: #fff; }
     <!-- SIDEBAR -->
     <div id="sidebar">
       <div id="sidebar-header">
-        <h3>Troll sticker tracker</h3>
+        <div id="sidebar-title-row">
+          <h3>Troll sticker tracker</h3>
+          <button id="calendar-toggle" onclick="toggleCalendar()" title="Filter by date">📅</button>
+        </div>
       </div>
       <div id="search-wrap">
         <svg id="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -474,6 +547,18 @@ footer a:hover { color: #fff; }
           <path d="M10.5 10.5L14 14" stroke="#aeaeb2" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         <input id="search-box" type="text" placeholder="Search locations..." oninput="filterSearch(this.value)">
+      </div>
+      <div id="date-filter">
+        <span id="date-filter-label"></span>
+        <button id="date-clear" onclick="clearDateFilter()">Clear</button>
+      </div>
+      <div id="calendar-panel">
+        <div id="calendar-head">
+          <button onclick="shiftCalendarMonth(-1)">‹</button>
+          <div id="calendar-label"></div>
+          <button onclick="shiftCalendarMonth(1)">›</button>
+        </div>
+        <div id="calendar-grid"></div>
       </div>
       <div id="sb-stats">
         <div class="sb-stat"><div class="v">84</div><div class="l">Stickers</div></div>
@@ -600,24 +685,30 @@ const CITY_LABELS = [
 ];
 
 let activeCity = null, activeIdx = null, zoomScale = 1, searchTerm = '';
-let imgurScriptReady = false;
+let selectedDate = null;
+let calendarOpen = false;
+const DATE_COUNTS = {};
+DATA.forEach(d => {
+  d.isoDate = toIsoDate(d.date);
+  DATE_COUNTS[d.isoDate] = (DATE_COUNTS[d.isoDate] || 0) + d.count;
+});
+const allDropDates = Object.keys(DATE_COUNTS).sort();
+let calendarMonth = allDropDates.length ? new Date(`${allDropDates[allDropDates.length-1]}T00:00:00`) : new Date();
 
-function ensureImgurEmbedScript() {
-  return new Promise((resolve) => {
-    if (imgurScriptReady) { resolve(); return; }
-    const existing = document.getElementById('imgur-embed-script');
-    if (existing) {
-      existing.addEventListener('load', () => { imgurScriptReady = true; resolve(); }, { once: true });
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = 'imgur-embed-script';
-    script.async = true;
-    script.src = 'https://s.imgur.com/min/embed.js';
-    script.charset = 'utf-8';
-    script.onload = () => { imgurScriptReady = true; resolve(); };
-    document.body.appendChild(script);
-  });
+function toIsoDate(dateStr) {
+  const d = new Date(dateStr);
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${day}`;
+}
+
+function getVisibleData() {
+  return DATA.filter(d =>
+    (!activeCity || d.city === activeCity) &&
+    (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm)) &&
+    (!selectedDate || d.isoDate === selectedDate)
+  );
 }
 
 function drawMap() {
@@ -754,10 +845,7 @@ function renderPins() {
   layer.innerHTML = '';
   const W = document.getElementById('map-canvas').width;
   const H = document.getElementById('map-canvas').height;
-  DATA.filter(d =>
-    (!activeCity || d.city === activeCity) &&
-    (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm))
-  ).forEach(loc => {
+  getVisibleData().forEach(loc => {
     const idx = DATA.indexOf(loc);
     const col = CITIES[loc.city];
     const pin = document.createElement('div');
@@ -773,10 +861,7 @@ function renderPins() {
 function renderList() {
   const list = document.getElementById('loc-list');
   list.innerHTML = '';
-  const visible = DATA.filter(d =>
-    (!activeCity || d.city === activeCity) &&
-    (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm))
-  );
+  const visible = getVisibleData();
   if (!visible.length) { list.innerHTML='<div class="empty-msg">No locations found</div>'; return; }
   visible.forEach(loc => {
     const idx = DATA.indexOf(loc);
@@ -848,6 +933,69 @@ function updatePhotoPanel(loc) {
     title.textContent = '';
     meta.textContent = '';
   }
+}
+
+function toggleCalendar() {
+  calendarOpen = !calendarOpen;
+  document.getElementById('calendar-panel').style.display = calendarOpen ? 'block' : 'none';
+  if (calendarOpen) renderCalendar();
+}
+
+function shiftCalendarMonth(delta) {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const label = document.getElementById('calendar-label');
+  const y = calendarMonth.getFullYear();
+  const m = calendarMonth.getMonth();
+  label.textContent = calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  grid.innerHTML = '';
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    const dow = document.createElement('div');
+    dow.className = 'cal-dow';
+    dow.textContent = d;
+    grid.appendChild(dow);
+  });
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-empty';
+    grid.appendChild(empty);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const btn = document.createElement('button');
+    btn.className = 'cal-day';
+    if (DATE_COUNTS[iso]) btn.classList.add('has-drop');
+    if (selectedDate === iso) btn.classList.add('active');
+    btn.textContent = day;
+    btn.onclick = () => setDateFilter(iso);
+    grid.appendChild(btn);
+  }
+}
+
+function setDateFilter(iso) {
+  selectedDate = iso;
+  const wrap = document.getElementById('date-filter');
+  wrap.style.display = 'flex';
+  const nice = new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('date-filter-label').textContent = `Date: ${nice}`;
+  closePopup();
+  renderCalendar();
+  renderList();
+  renderPins();
+}
+
+function clearDateFilter() {
+  selectedDate = null;
+  document.getElementById('date-filter').style.display = 'none';
+  renderCalendar();
+  renderList();
+  renderPins();
 }
 
 function zoom(delta) {
