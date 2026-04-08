@@ -122,7 +122,7 @@ header p {
 
 #map-app {
   display: flex;
-  height: 600px;
+  height: clamp(520px, 68vh, 760px);
   border-radius: 18px;
   overflow: hidden;
   border: 0.5px solid rgba(255,255,255,0.1);
@@ -148,6 +148,17 @@ header p {
   color: var(--text-primary);
   letter-spacing: -0.3px;
 }
+#sidebar-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#calendar-toggle {
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1;
+}
+#calendar-toggle:hover { background: var(--bg-card-hover); }
 #sidebar-header p {
   font-size: 11px;
   color: var(--text-secondary);
@@ -178,6 +189,65 @@ header p {
   transition: border-color 0.15s;
 }
 #search-box:focus { border-color: #007aff; }
+#date-filter {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--border);
+  background: #eef4ff;
+}
+#date-filter span { font-size: 11px; color: #2f3f6d; font-weight: 600; }
+#date-clear {
+  border: none;
+  background: #dce8ff;
+  color: #2f3f6d;
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+#calendar-panel {
+  display: none;
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--border);
+  background: #fbfbfd;
+}
+#calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+#calendar-head button {
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 7px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+#calendar-label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+#calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-day {
+  border: 0.5px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 7px;
+  font-size: 10px;
+  color: var(--text-primary);
+  padding: 5px 0;
+  text-align: center;
+  cursor: pointer;
+}
+.cal-day.has-drop { border-color: #9fb8ff; background: #edf3ff; }
+.cal-day.active { background: #007aff; color: white; border-color: #007aff; font-weight: 700; }
+.cal-empty { height: 24px; }
+.cal-dow { font-size: 9px; color: var(--text-secondary); text-align: center; padding-bottom: 2px; }
 
 #sb-stats {
   display: flex;
@@ -249,11 +319,51 @@ header p {
 /* ── MAP ── */
 #map-wrap {
   flex: 1;
+  min-width: 0;
   position: relative;
   overflow: hidden;
+  background: var(--bg-map);
+}
+#map-content {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  transition: transform 180ms ease-out;
 }
 #map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #pins-layer  { position: absolute; inset: 0; pointer-events: none; }
+#photo-panel {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  background: rgba(255,255,255,0.97);
+  border-left: 0.5px solid rgba(0,0,0,0.1);
+  transition: width 220ms ease, opacity 180ms ease, padding 220ms ease;
+  padding: 0;
+}
+#map-app.show-photo #photo-panel {
+  width: 360px;
+  opacity: 1;
+  padding: 14px;
+}
+#photo-panel h4 {
+  font-size: 14px;
+  color: #1c1c1e;
+  margin-bottom: 4px;
+}
+#photo-panel p {
+  font-size: 12px;
+  color: #6e6e73;
+  margin-bottom: 10px;
+}
+#photo-panel img {
+  width: 100%;
+  height: calc(100% - 54px);
+  max-height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 0.5px solid #d1d1d6;
+}
 
 .pin {
   position: absolute;
@@ -421,7 +531,10 @@ footer a:hover { color: #fff; }
     <!-- SIDEBAR -->
     <div id="sidebar">
       <div id="sidebar-header">
-        <h3>Troll sticker tracker</h3>
+        <div id="sidebar-title-row">
+          <h3>Troll sticker tracker</h3>
+          <button id="calendar-toggle" onclick="toggleCalendar()" title="Filter by date">📅</button>
+        </div>
       </div>
       <div id="search-wrap">
         <svg id="search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -429,6 +542,18 @@ footer a:hover { color: #fff; }
           <path d="M10.5 10.5L14 14" stroke="#aeaeb2" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
         <input id="search-box" type="text" placeholder="Search locations..." oninput="filterSearch(this.value)">
+      </div>
+      <div id="date-filter">
+        <span id="date-filter-label"></span>
+        <button id="date-clear" onclick="clearDateFilter()">Clear</button>
+      </div>
+      <div id="calendar-panel">
+        <div id="calendar-head">
+          <button onclick="shiftCalendarMonth(-1)">‹</button>
+          <div id="calendar-label"></div>
+          <button onclick="shiftCalendarMonth(1)">›</button>
+        </div>
+        <div id="calendar-grid"></div>
       </div>
       <div id="sb-stats">
         <div class="sb-stat"><div class="v">84</div><div class="l">Stickers</div></div>
@@ -442,8 +567,10 @@ footer a:hover { color: #fff; }
 
     <!-- MAP -->
     <div id="map-wrap">
-      <canvas id="map-canvas"></canvas>
-      <div id="pins-layer"></div>
+      <div id="map-content">
+        <canvas id="map-canvas"></canvas>
+        <div id="pins-layer"></div>
+      </div>
       <div id="popup">
         <div id="popup-close" onclick="closePopup()">×</div>
         <h4 id="p-name"></h4>
@@ -457,6 +584,11 @@ footer a:hover { color: #fff; }
       </div>
       <div id="scale-bar">San Bernardino &amp; Riverside Counties</div>
     </div>
+    <aside id="photo-panel">
+      <h4 id="photo-title"></h4>
+      <p id="photo-meta"></p>
+      <img id="photo-img" alt="" loading="lazy" referrerpolicy="no-referrer">
+    </aside>
 
   </div>
 </section>
@@ -488,8 +620,8 @@ footer a:hover { color: #fff; }
 
 <script>
 const DATA = [
-  {city:"Fontana",           name:"Beech Ave",                        date:"Oct 17, 2025", count:1,  px:46, py:44},
-  {city:"Fontana",           name:"Koehler Park",                     date:"Oct 17, 2025", count:1,  px:42, py:50},
+  {city:"Fontana",           name:"Beech Ave",                        date:"Oct 17, 2025", count:1,  px:46, py:44, imageUrl:"https://i.imgur.com/lLd8qJH.jpeg", imageTitle:"Beech Ave, Fontana, California"},
+  {city:"Fontana",           name:"Koehler Park",                     date:"Oct 17, 2025", count:1,  px:42, py:50, imageUrl:"https://i.imgur.com/EwbZyfL.jpeg", imageTitle:"Koehler Park, Fontana, California"},
   {city:"Fontana",           name:"Almeria Park",                     date:"Oct 17, 2025", count:1,  px:50, py:56},
   {city:"Fontana",           name:"Ralph M. Lewis Sports Complex",    date:"Oct 17, 2025", count:2,  px:38, py:42},
   {city:"Fontana",           name:"Sierra Lakes Golf Club",           date:"Oct 17, 2025", count:1,  px:34, py:36},
@@ -544,6 +676,31 @@ const CITY_LABELS = [
 ];
 
 let activeCity = null, activeIdx = null, zoomScale = 1, searchTerm = '';
+let selectedDate = null;
+let calendarOpen = false;
+const DATE_COUNTS = {};
+DATA.forEach(d => {
+  d.isoDate = toIsoDate(d.date);
+  DATE_COUNTS[d.isoDate] = (DATE_COUNTS[d.isoDate] || 0) + d.count;
+});
+const allDropDates = Object.keys(DATE_COUNTS).sort();
+let calendarMonth = allDropDates.length ? new Date(`${allDropDates[allDropDates.length-1]}T00:00:00`) : new Date();
+
+function toIsoDate(dateStr) {
+  const d = new Date(dateStr);
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${day}`;
+}
+
+function getVisibleData() {
+  return DATA.filter(d =>
+    (!activeCity || d.city === activeCity) &&
+    (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm)) &&
+    (!selectedDate || d.isoDate === selectedDate)
+  );
+}
 
 function drawMap() {
   const cv = document.getElementById('map-canvas');
@@ -679,10 +836,7 @@ function renderPins() {
   layer.innerHTML = '';
   const W = document.getElementById('map-canvas').width;
   const H = document.getElementById('map-canvas').height;
-  DATA.filter(d =>
-    (!activeCity || d.city === activeCity) &&
-    (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm))
-  ).forEach(loc => {
+  getVisibleData().forEach(loc => {
     const idx = DATA.indexOf(loc);
     const col = CITIES[loc.city];
     const pin = document.createElement('div');
@@ -698,10 +852,7 @@ function renderPins() {
 function renderList() {
   const list = document.getElementById('loc-list');
   list.innerHTML = '';
-  const visible = DATA.filter(d =>
-    (!activeCity || d.city === activeCity) &&
-    (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm))
-  );
+  const visible = getVisibleData();
   if (!visible.length) { list.innerHTML='<div class="empty-msg">No locations found</div>'; return; }
   visible.forEach(loc => {
     const idx = DATA.indexOf(loc);
@@ -729,15 +880,18 @@ function selectPin(idx) {
   const W = document.getElementById('map-canvas').width;
   const H = document.getElementById('map-canvas').height;
   const px = loc.px/100*W, py = loc.py/100*H;
+  const scaledX = (px - W/2) * zoomScale + W/2;
+  const scaledY = (py - H/2) * zoomScale + H/2;
   document.getElementById('p-name').textContent = loc.name;
   const tag = document.getElementById('p-city-tag');
   tag.textContent=loc.city; tag.style.background=col.bg; tag.style.color=col.txt;
   document.getElementById('p-date').textContent  = loc.date;
   document.getElementById('p-count').textContent = loc.count+' sticker'+(loc.count>1?'s':'');
+  updatePhotoPanel(loc);
   const popup = document.getElementById('popup');
   popup.style.display='block';
-  popup.style.left = Math.min(px+14, W-250)+'px';
-  popup.style.top  = Math.max(py-130, 10)+'px';
+  popup.style.left = Math.min(scaledX+14, W-250)+'px';
+  popup.style.top  = Math.max(scaledY-130, 10)+'px';
   document.querySelectorAll('.loc-card').forEach(c=>c.classList.remove('active'));
   const card=document.querySelector(`.loc-card[data-idx="${idx}"]`);
   if(card){card.classList.add('active'); card.scrollIntoView({block:'nearest',behavior:'smooth'});}
@@ -746,23 +900,109 @@ function selectPin(idx) {
 
 function closePopup() {
   document.getElementById('popup').style.display='none';
+  updatePhotoPanel(null);
   activeIdx=null;
   document.querySelectorAll('.loc-card').forEach(c=>c.classList.remove('active'));
   renderPins();
 }
 
-function zoom(delta) {
-  zoomScale = Math.max(0.7, Math.min(2.5, zoomScale + delta));
-  ['map-canvas','pins-layer'].forEach(id=>{
-    const el=document.getElementById(id);
-    el.style.transformOrigin='50% 50%';
-    el.style.transform=`scale(${zoomScale})`;
+function updatePhotoPanel(loc) {
+  const app = document.getElementById('map-app');
+  const img = document.getElementById('photo-img');
+  const title = document.getElementById('photo-title');
+  const meta = document.getElementById('photo-meta');
+  if (loc && loc.imageUrl) {
+    app.classList.add('show-photo');
+    img.src = loc.imageUrl;
+    img.alt = loc.imageTitle || loc.name;
+    title.textContent = loc.name;
+    meta.textContent = `${loc.city} · ${loc.date}`;
+  } else {
+    app.classList.remove('show-photo');
+    img.removeAttribute('src');
+    img.alt = '';
+    title.textContent = '';
+    meta.textContent = '';
+  }
+}
+
+function toggleCalendar() {
+  calendarOpen = !calendarOpen;
+  document.getElementById('calendar-panel').style.display = calendarOpen ? 'block' : 'none';
+  if (calendarOpen) renderCalendar();
+}
+
+function shiftCalendarMonth(delta) {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const label = document.getElementById('calendar-label');
+  const y = calendarMonth.getFullYear();
+  const m = calendarMonth.getMonth();
+  label.textContent = calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  grid.innerHTML = '';
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    const dow = document.createElement('div');
+    dow.className = 'cal-dow';
+    dow.textContent = d;
+    grid.appendChild(dow);
   });
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-empty';
+    grid.appendChild(empty);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const btn = document.createElement('button');
+    btn.className = 'cal-day';
+    if (DATE_COUNTS[iso]) btn.classList.add('has-drop');
+    if (selectedDate === iso) btn.classList.add('active');
+    btn.textContent = day;
+    btn.onclick = () => setDateFilter(iso);
+    grid.appendChild(btn);
+  }
+}
+
+function setDateFilter(iso) {
+  selectedDate = iso;
+  const wrap = document.getElementById('date-filter');
+  wrap.style.display = 'flex';
+  const nice = new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  document.getElementById('date-filter-label').textContent = `Date: ${nice}`;
+  closePopup();
+  renderCalendar();
+  renderList();
+  renderPins();
+}
+
+function clearDateFilter() {
+  selectedDate = null;
+  document.getElementById('date-filter').style.display = 'none';
+  renderCalendar();
+  renderList();
+  renderPins();
+}
+
+function zoom(delta) {
+  zoomScale = Math.max(0.85, Math.min(3, +(zoomScale + delta).toFixed(2)));
+  document.getElementById('map-content').style.transform = `scale(${zoomScale})`;
+  if (activeIdx !== null) selectPin(activeIdx);
 }
 
 document.getElementById('map-wrap').addEventListener('click', e => {
-  if(e.target.id==='map-canvas'||e.target.id==='map-wrap') closePopup();
+  if (e.target.id==='map-wrap' || e.target.id==='map-content' || e.target.id==='map-canvas') closePopup();
 });
+
+document.getElementById('map-wrap').addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom(e.deltaY < 0 ? 0.1 : -0.1);
+}, { passive: false });
 
 window.addEventListener('resize', ()=>{ drawMap(); renderPins(); });
 
