@@ -139,6 +139,18 @@ header p {
   flex-direction: column;
   border-right: 0.5px solid var(--border);
 }
+#panel-resizer {
+  width: 10px;
+  cursor: col-resize;
+  background: linear-gradient(to right, rgba(255,255,255,0.02), rgba(255,255,255,0.09), rgba(255,255,255,0.02));
+  border-right: 0.5px solid rgba(255,255,255,0.08);
+  border-left: 0.5px solid rgba(0,0,0,0.08);
+  flex: 0 0 10px;
+  touch-action: none;
+}
+#panel-resizer:hover {
+  background: linear-gradient(to right, rgba(255,255,255,0.06), rgba(255,255,255,0.16), rgba(255,255,255,0.06));
+}
 #sidebar-header {
   padding: 16px 14px 10px;
   border-bottom: 0.5px solid var(--border);
@@ -560,6 +572,7 @@ footer a:hover { color: #fff; }
     border-right: none;
     border-bottom: 0.5px solid var(--border);
   }
+  #panel-resizer { display: none; }
 
   #map-wrap {
     min-height: 52vh;
@@ -647,6 +660,7 @@ footer a:hover { color: #fff; }
       <div id="city-tabs"></div>
       <div id="loc-list"></div>
     </div>
+    <div id="panel-resizer" aria-hidden="true" title="Drag to resize panels"></div>
 
     <!-- MAP -->
     <div id="map-wrap">
@@ -753,6 +767,9 @@ let selectedDate = null;
 let calendarOpen = false;
 let map = null;
 let markersLayer = null;
+let isResizingPanels = false;
+let resizeStartX = 0;
+let resizeStartWidth = 0;
 const DATE_COUNTS = {};
 DATA.forEach(d => {
   d.isoDate = toIsoDate(d.date);
@@ -793,6 +810,50 @@ function initMap() {
   markersLayer = L.layerGroup().addTo(map);
   map.on('click', () => closePopup());
   map.on('zoom move', () => { if (activeIdx !== null) positionPopup(DATA[activeIdx]); });
+}
+
+function initPanelResizer() {
+  const app = document.getElementById('map-app');
+  const sidebar = document.getElementById('sidebar');
+  const resizer = document.getElementById('panel-resizer');
+  if (!app || !sidebar || !resizer) return;
+
+  function onPointerMove(e) {
+    if (!isResizingPanels) return;
+    const appRect = app.getBoundingClientRect();
+    const delta = e.clientX - resizeStartX;
+    const maxWidth = Math.min(560, appRect.width * 0.6);
+    const next = Math.max(230, Math.min(maxWidth, resizeStartWidth + delta));
+    sidebar.style.width = `${next}px`;
+    sidebar.style.minWidth = `${next}px`;
+  }
+
+  function stopResize() {
+    if (!isResizingPanels) return;
+    isResizingPanels = false;
+    document.body.style.userSelect = '';
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', stopResize);
+  }
+
+  resizer.addEventListener('pointerdown', e => {
+    if (window.matchMedia('(max-width: 900px)').matches) return;
+    isResizingPanels = true;
+    resizeStartX = e.clientX;
+    resizeStartWidth = sidebar.getBoundingClientRect().width;
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', stopResize);
+  });
+}
+
+function syncSidebarWidthForViewport() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    sidebar.style.width = '';
+    sidebar.style.minWidth = '';
+  }
 }
 
 function buildTabs() {
@@ -1067,9 +1128,12 @@ function zoom(delta) {
   else map.zoomOut();
 }
 
-window.addEventListener('resize', ()=>{ if (activeIdx !== null) positionPopup(DATA[activeIdx]); });
+window.addEventListener('resize', ()=>{
+  syncSidebarWidthForViewport();
+  if (activeIdx !== null) positionPopup(DATA[activeIdx]);
+});
 
-initMap(); buildTabs(); renderPins(); renderList();
+initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); syncSidebarWidthForViewport();
 </script>
 </body>
 </html>
