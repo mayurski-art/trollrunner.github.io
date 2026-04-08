@@ -562,6 +562,25 @@ const CITY_LABELS = [
 ];
 
 let activeCity = null, activeIdx = null, zoomScale = 1, searchTerm = '';
+let imgurScriptReady = false;
+
+function ensureImgurEmbedScript() {
+  return new Promise((resolve) => {
+    if (imgurScriptReady) { resolve(); return; }
+    const existing = document.getElementById('imgur-embed-script');
+    if (existing) {
+      existing.addEventListener('load', () => { imgurScriptReady = true; resolve(); }, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'imgur-embed-script';
+    script.async = true;
+    script.src = 'https://s.imgur.com/min/embed.js';
+    script.charset = 'utf-8';
+    script.onload = () => { imgurScriptReady = true; resolve(); };
+    document.body.appendChild(script);
+  });
+}
 
 function drawMap() {
   const cv = document.getElementById('map-canvas');
