@@ -516,6 +516,11 @@ header p {
   margin: 0 auto 40px;
   padding: 0 24px;
 }
+#feedback {
+  max-width: 860px;
+  margin: 0 auto 40px;
+  padding: 0 24px;
+}
 #found-sticker {
   max-width: 860px;
   margin: 0 auto 40px;
@@ -549,6 +554,44 @@ header p {
   font-size: 13px;
   line-height: 1.6;
   color: #4a4a4a;                  /* readable gray for description */
+}
+
+.feedback-field {
+  width: 100%;
+  border: 0.5px solid #d1d1d6;
+  border-radius: 10px;
+  background: #f9f9fb;
+  color: #1c1c1e;
+  font-family: var(--font);
+  font-size: 14px;
+  padding: 12px;
+  min-height: 110px;
+  resize: vertical;
+}
+
+.feedback-actions {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.feedback-btn {
+  border: 0.5px solid #005ed1;
+  border-radius: 10px;
+  background: #007aff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font);
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.feedback-status {
+  font-size: 12px;
+  color: #6e6e73;
 }
 
 /* ── FOOTER ── */
@@ -611,6 +654,7 @@ footer a:hover { color: #fff; }
   #stats-banner,
   #map-section,
   #updates,
+  #feedback,
   #found-sticker {
     padding-left: 14px;
     padding-right: 14px;
@@ -798,6 +842,20 @@ footer a:hover { color: #fff; }
   <div id="custom-updates"></div>
 </section>
 
+
+<section id="feedback">
+  <h2>Feedback</h2>
+  <div class="update-card">
+    <p>Drop feedback for the admin team. AI triage will label your note before it gets routed into the admin system.</p>
+    <div style="height:10px"></div>
+    <textarea id="feedback-text" class="feedback-field" placeholder="Tell us what to improve, where you found bugs, or what features you want next..."></textarea>
+    <div class="feedback-actions">
+      <button class="feedback-btn" onclick="submitFeedback()">Submit feedback</button>
+      <span id="feedback-status" class="feedback-status"></span>
+    </div>
+  </div>
+</section>
+
 <section id="found-sticker">
   <h2>Found a sticker?</h2>
   <div class="update-card">
@@ -821,6 +879,7 @@ footer a:hover { color: #fff; }
 <script>
 const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
+const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
 const DATA = [
   {city:"Fontana",           name:"Beech Ave",                        date:"Oct 17, 2025", count:1,  px:46, py:44, imageUrl:"https://i.imgur.com/lLd8qJH.jpeg", imageTitle:"Beech Ave, Fontana, California"},
   {city:"Fontana",           name:"Koehler Park",                     date:"Oct 17, 2025", count:1,  px:42, py:50, imageUrl:"https://i.imgur.com/EwbZyfL.jpeg", imageTitle:"Koehler Park, Fontana, California"},
@@ -1287,6 +1346,48 @@ function loadCustomUpdates() {
     card.innerHTML = `<h3>${u.title}</h3><p>${u.body}</p>`;
     wrap.appendChild(card);
   });
+}
+
+
+function classifyFeedback(message) {
+  const text = message.toLowerCase();
+  let topic = 'general';
+  if (/(bug|broken|error|issue|not work|crash|fix)/.test(text)) topic = 'bug';
+  else if (/(feature|add|would like|should have|can you|request)/.test(text)) topic = 'feature request';
+  else if (/(love|great|awesome|thanks|good job|nice)/.test(text)) topic = 'positive';
+
+  const priority = /(urgent|asap|critical|broken|down|immediately)/.test(text) ? 'high' : 'normal';
+  return { topic, priority };
+}
+
+function submitFeedback() {
+  const input = document.getElementById('feedback-text');
+  const status = document.getElementById('feedback-status');
+  const message = input.value.trim();
+  if (!message) {
+    status.textContent = 'Please enter feedback before submitting.';
+    return;
+  }
+
+  let items = [];
+  try {
+    items = JSON.parse(localStorage.getItem(ADMIN_FEEDBACK_KEY) || '[]');
+    if (!Array.isArray(items)) items = [];
+  } catch {
+    items = [];
+  }
+
+  const ai = classifyFeedback(message);
+  items.unshift({
+    message,
+    aiTopic: ai.topic,
+    aiPriority: ai.priority,
+    createdAt: new Date().toISOString()
+  });
+  localStorage.setItem(ADMIN_FEEDBACK_KEY, JSON.stringify(items));
+
+  input.value = '';
+  status.textContent = `Feedback sent to admin system (${ai.topic}, ${ai.priority} priority).`;
 }
 
 function removeDuplicateFoundStickerSections() {

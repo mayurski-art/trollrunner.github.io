@@ -82,11 +82,20 @@
       <h3>Saved custom updates</h3>
       <div id="preview"></div>
     </div>
+
+    <div class="card preview">
+      <h3>Feedback to admin system</h3>
+      <div id="feedback-preview"></div>
+      <div class="row">
+        <button class="secondary" onclick="clearFeedback()">Clear feedback inbox</button>
+      </div>
+    </div>
   </div>
 
   <script>
     const AUTH_KEY = 'trollrunner_admin_auth';
     const UPDATES_KEY = 'trollrunner_updates';
+    const FEEDBACK_KEY = 'trollrunner_feedback';
     if (localStorage.getItem(AUTH_KEY) !== '1') {
       window.location.href = 'index.html';
     }
@@ -137,7 +146,35 @@
       renderUpdates();
     }
 
+
+    function getFeedback() {
+      try {
+        const items = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || '[]');
+        return Array.isArray(items) ? items : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function renderFeedback() {
+      const wrap = document.getElementById('feedback-preview');
+      const items = getFeedback();
+      wrap.innerHTML = items.length
+        ? items.map(item => {
+            const created = item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Unknown time';
+            return `<div class="item"><strong>${escapeHtml(item.aiTopic || 'general')}</strong> · ${escapeHtml(item.aiPriority || 'normal')} priority<br><small>${escapeHtml(created)}</small><p>${escapeHtml(item.message || '')}</p></div>`;
+          }).join('')
+        : '<p>No feedback submissions yet.</p>';
+    }
+
+    function clearFeedback() {
+      if (!confirm('Clear all feedback submissions?')) return;
+      localStorage.setItem(FEEDBACK_KEY, '[]');
+      renderFeedback();
+    }
+
     renderUpdates();
+    renderFeedback();
   </script>
 </body>
 </html>
