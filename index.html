@@ -1510,12 +1510,23 @@ function removeDuplicateFoundStickerSections() {
   });
 }
 
+const ADMIN_PASSWORD_TROLL_MESSAGES = [
+  'Wrong password. Back to the starting line.',
+  'You’re trolling… but not that good.',
+  'Admin access requires elite runner stats. Looks like you can try burning some calories.',
+  'You trained to run my website… right? How about running outside for a change?'
+];
+let adminFailedAttempts = 0;
+
 function goToAdmin() {
   const pass = document.getElementById('admin-pass').value;
   if (pass !== ADMIN_PASSWORD) {
-    alert('Incorrect password.');
+    adminFailedAttempts += 1;
+    const idx = Math.min(adminFailedAttempts - 1, ADMIN_PASSWORD_TROLL_MESSAGES.length - 1);
+    alert(ADMIN_PASSWORD_TROLL_MESSAGES[idx]);
     return;
   }
+  adminFailedAttempts = 0;
   localStorage.setItem('trollrunner_admin_auth', '1');
   window.location.href = 'admin.html';
 }
