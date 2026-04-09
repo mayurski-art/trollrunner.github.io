@@ -53,20 +53,11 @@ header h1 {
   align-items: center;
   gap: 10px;
 }
-.title-gif-mask {
+.title-gif {
   width: 42px;
   height: 42px;
+  object-fit: contain;
   border-radius: 8px;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.title-gif {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  object-position: center 32%;
 }
 header p {
   font-size: 13px;
@@ -605,6 +596,7 @@ header p {
 
 /* ── FOOTER ── */
 footer {
+  text-align: center;
   padding: 24px;
   color: rgba(255,255,255,0.4);
   font-size: 13px;
@@ -612,27 +604,6 @@ footer {
 }
 footer a { color: rgba(255,255,255,0.6); text-decoration: none; }
 footer a:hover { color: #fff; }
-.footer-inner {
-  max-width: 980px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 34px minmax(0,1fr) 34px;
-  align-items: center;
-  gap: 12px;
-}
-.footer-copy {
-  margin: 0;
-  text-align: center;
-}
-.footer-gif {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-}
-.footer-gif-spacer {
-  width: 34px;
-  height: 34px;
-}
 
 #admin-access {
   position: fixed;
@@ -677,8 +648,7 @@ footer a:hover { color: #fff; }
 @media (max-width: 900px) {
   header { padding: 22px 16px 14px; }
   header h1 { font-size: 30px; }
-  .title-gif-mask { width: 34px; height: 34px; }
-  .title-gif { width: 44px; height: 44px; }
+  .title-gif { width: 34px; height: 34px; }
 
   #biography,
   #stats-banner,
@@ -764,7 +734,7 @@ footer a:hover { color: #fff; }
 <body>
 
 <header>
-  <h1><span class="title-gif-mask"><img class="title-gif" src="assets/images/copy_657B4F64-CDEB-468E-BD5B-1E8C109C4914.gif.gif" alt="Troll face animation"></span>Troll Runner</h1>
+  <h1><img class="title-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation">Troll Runner<img class="title-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation"></h1>
 </header>
 
 <section id="biography">
@@ -898,11 +868,7 @@ footer a:hover { color: #fff; }
 </section>
 
 <footer>
-  <div class="footer-inner">
-    <span class="footer-gif-spacer" aria-hidden="true"></span>
-    <p class="footer-copy">Connect with me on X &mdash; <a href="https://twitter.com/troll_runner" target="_blank">@troll_runner</a></p>
-    <img class="footer-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation">
-  </div>
+  <p>Connect with me on X &mdash; <a href="https://twitter.com/troll_runner" target="_blank">@troll_runner</a></p>
 </footer>
 <div id="admin-access">
   <input id="admin-pass" type="password" placeholder="Admin password">
