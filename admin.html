@@ -125,6 +125,10 @@
       return str.replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
     }
 
+    function createUpdateId() {
+      return `update-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
     function getUpdates() {
       try {
         const items = JSON.parse(localStorage.getItem(UPDATES_KEY) || '[]');
@@ -144,11 +148,24 @@
       if (!safeTitle || !safeBody) return null;
       const stamp = new Date(update?.createdAt || 0).getTime();
       return {
+        id: String(update?.id || createUpdateId()),
         title: safeTitle,
         body: safeBody,
         createdAt: Number.isFinite(stamp) && stamp > 0 ? stamp : 0,
+        archived: Boolean(update?.archived),
         source,
       };
+    }
+
+    function ensureSeededUpdates() {
+      const existing = getUpdates().map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean);
+      if (existing.length) {
+        setUpdates(existing);
+        return existing;
+      }
+      const seeded = DEFAULT_UPDATES.map(item => normalizeUpdate({ ...item, id: createUpdateId(), archived: false }, 'site-default')).filter(Boolean);
+      setUpdates(seeded);
+      return seeded;
     }
 
     function renderUpdateList(items, emptyMessage) {
@@ -156,18 +173,30 @@
       return items.map(u => {
         const created = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Unknown date';
         const origin = u.source === 'site-default' ? 'Default' : 'Custom';
-        return `<div class="item"><strong>${escapeHtml(u.title)}</strong><br><small>${escapeHtml(created)} · ${escapeHtml(origin)}</small><p>${escapeHtml(u.body)}</p></div>`;
+        return `<div class="item">
+          <strong>${escapeHtml(u.title)}</strong><br>
+          <small>${escapeHtml(created)} · ${escapeHtml(origin)}</small>
+          <p>${escapeHtml(u.body)}</p>
+          <div class="row">
+            <button class="secondary" onclick="editUpdate('${escapeHtml(u.id)}')">Edit</button>
+            <button class="secondary" onclick="toggleArchiveUpdate('${escapeHtml(u.id)}')">${u.archived ? 'Unarchive' : 'Archive'}</button>
+          </div>
+        </div>`;
       }).join('');
     }
 
     function renderUpdates() {
       const wrap = document.getElementById('preview');
-      const custom = getUpdates().map(item => normalizeUpdate(item, 'custom')).filter(Boolean);
-      const combined = [...DEFAULT_UPDATES.map(item => normalizeUpdate(item, 'site-default')), ...custom]
+      const combined = ensureSeededUpdates()
+        .map(item => normalizeUpdate(item, item?.source || 'custom'))
         .filter(Boolean)
         .sort((a, b) => b.createdAt - a.createdAt);
-      const active = combined.slice(0, MAX_VISIBLE_UPDATES).sort((a, b) => a.createdAt - b.createdAt);
-      const archived = combined.slice(MAX_VISIBLE_UPDATES).sort((a, b) => b.createdAt - a.createdAt);
+      const activePool = combined.filter(item => !item.archived);
+      const active = activePool.slice(0, MAX_VISIBLE_UPDATES).sort((a, b) => a.createdAt - b.createdAt);
+      const archived = [
+        ...combined.filter(item => item.archived),
+        ...activePool.slice(MAX_VISIBLE_UPDATES),
+      ].sort((a, b) => b.createdAt - a.createdAt);
       wrap.innerHTML = `
         <h4>Homepage (latest ${MAX_VISIBLE_UPDATES})</h4>
         ${renderUpdateList(active, 'No updates available.')}
@@ -183,8 +212,8 @@
         alert('Please enter both title and body.');
         return;
       }
-      const updates = getUpdates();
-      updates.unshift({ title, body, createdAt: new Date().toISOString() });
+      const updates = ensureSeededUpdates();
+      updates.unshift({ id: createUpdateId(), title, body, createdAt: new Date().toISOString(), archived: false, source: 'custom' });
       setUpdates(updates);
       document.getElementById('u-title').value = '';
       document.getElementById('u-body').value = '';
@@ -192,9 +221,40 @@
       alert('Update saved. Refresh homepage to view it.');
     }
 
+    function editUpdate(id) {
+      const updates = ensureSeededUpdates();
+      const idx = updates.findIndex(item => String(item.id) === String(id));
+      if (idx < 0) return;
+      const current = normalizeUpdate(updates[idx], updates[idx]?.source || 'custom');
+      if (!current) return;
+      const nextTitle = prompt('Edit update title:', current.title);
+      if (nextTitle === null) return;
+      const nextBody = prompt('Edit update body:', current.body);
+      if (nextBody === null) return;
+      const title = nextTitle.trim();
+      const body = nextBody.trim();
+      if (!title || !body) {
+        alert('Both title and body are required.');
+        return;
+      }
+      updates[idx] = { ...updates[idx], title, body };
+      setUpdates(updates);
+      renderUpdates();
+    }
+
+    function toggleArchiveUpdate(id) {
+      const updates = ensureSeededUpdates();
+      const idx = updates.findIndex(item => String(item.id) === String(id));
+      if (idx < 0) return;
+      updates[idx] = { ...updates[idx], archived: !Boolean(updates[idx].archived) };
+      setUpdates(updates);
+      renderUpdates();
+    }
+
     function clearUpdates() {
       if (!confirm('Clear all custom updates?')) return;
-      setUpdates([]);
+      const base = DEFAULT_UPDATES.map(item => normalizeUpdate({ ...item, id: createUpdateId(), archived: false }, 'site-default')).filter(Boolean);
+      setUpdates(base);
       renderUpdates();
     }
 

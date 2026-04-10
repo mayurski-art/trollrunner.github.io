@@ -1101,6 +1101,7 @@ footer a:hover { color: #fff; }
 const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
 const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
+const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 4;
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DEFAULT_UPDATES = [
@@ -1180,6 +1181,9 @@ let spotifyLoaded = false;
 let spotifyIsPlaying = false;
 let spotifyTrackLabel = 'Waiting for current track…';
 let spotifyCurrentUri = '';
+const liveCoordinateMap = {};
+let geoCache = null;
+const geoInflight = new Set();
 const spotifyTrackLabelCache = new Map();
 const DATE_COUNTS = {};
 DATA.forEach(d => {
@@ -1359,6 +1363,71 @@ function pointToLatLng(px, py) {
   return [lat, lng];
 }
 
+function updateKey(loc) {
+  return `${loc.city}::${loc.name}`;
+}
+
+function getSavedGeoCache() {
+  if (geoCache) return geoCache;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}');
+    geoCache = parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    geoCache = {};
+  }
+  return geoCache;
+}
+
+function saveGeoCache() {
+  if (!geoCache) return;
+  localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(geoCache));
+}
+
+function getLatLngForLocation(loc) {
+  const key = updateKey(loc);
+  const cached = liveCoordinateMap[key];
+  if (cached) return cached;
+  return pointToLatLng(loc.px, loc.py);
+}
+
+async function hydrateLocationAccuracy(visibleLocations) {
+  const cache = getSavedGeoCache();
+  const toFetch = [];
+  visibleLocations.forEach(loc => {
+    const key = updateKey(loc);
+    const cached = cache[key];
+    if (cached && Number.isFinite(cached.lat) && Number.isFinite(cached.lng)) {
+      liveCoordinateMap[key] = [cached.lat, cached.lng];
+      return;
+    }
+    toFetch.push({ key, loc });
+  });
+  if (!toFetch.length) return;
+
+  for (const item of toFetch) {
+    if (geoInflight.has(item.key)) continue;
+    geoInflight.add(item.key);
+    const q = encodeURIComponent(`${item.loc.name}, ${item.loc.city}, California`);
+    try {
+      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${q}`);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (!Array.isArray(data) || !data.length) continue;
+      const lat = Number(data[0].lat);
+      const lng = Number(data[0].lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      liveCoordinateMap[item.key] = [lat, lng];
+      cache[item.key] = { lat, lng };
+    } catch {}
+    finally {
+      geoInflight.delete(item.key);
+    }
+  }
+  saveGeoCache();
+  renderPins();
+  if (activeIdx !== null) positionPopup(DATA[activeIdx]);
+}
+
 function initMap() {
   map = L.map('leaflet-map', { zoomControl: false, minZoom: 9, maxZoom: 16 }).setView([34.03, -117.35], 10);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1483,19 +1552,21 @@ function filterSearch(val) {
 function renderPins() {
   if (!map || !markersLayer) return;
   markersLayer.clearLayers();
-  getVisibleData().forEach(loc => {
+  const visible = getVisibleData();
+  visible.forEach(loc => {
     const idx = DATA.indexOf(loc);
     const col = CITIES[loc.city];
     const html = `<div class="lf-pin${activeIdx === idx ? ' active-pin' : ''}">
       <div class="pin-body" style="background:${col.pin}"><span class="pin-letter">🧌</span></div>
       ${loc.count>1?`<div class="pin-count">${loc.count}</div>`:''}
     </div>`;
-    const marker = L.marker(pointToLatLng(loc.px, loc.py), {
+    const marker = L.marker(getLatLngForLocation(loc), {
       icon: L.divIcon({ className: 'lf-pin-wrap', html, iconSize: [34, 42], iconAnchor: [17, 38] })
     });
     marker.on('click', () => selectPin(idx));
     marker.addTo(markersLayer);
   });
+  hydrateLocationAccuracy(visible);
 }
 
 function renderList() {
@@ -1543,7 +1614,7 @@ function positionPopup(loc) {
   if (!map) return;
   const popup = document.getElementById('popup');
   const mapWrap = document.getElementById('map-wrap');
-  const pt = map.latLngToContainerPoint(pointToLatLng(loc.px, loc.py));
+  const pt = map.latLngToContainerPoint(getLatLngForLocation(loc));
   popup.style.display='block';
   popup.style.left = Math.min(pt.x + 14, mapWrap.clientWidth - 250) + 'px';
   popup.style.top  = Math.max(pt.y - 130, 10) + 'px';
@@ -1732,6 +1803,7 @@ function normalizeUpdate(update) {
     title: safeTitle,
     body: safeBody,
     createdAt: Number.isFinite(stamp) && stamp > 0 ? stamp : 0,
+    archived: Boolean(update?.archived),
   };
 }
 
@@ -1744,8 +1816,10 @@ function loadCustomUpdates() {
   } catch {
     customUpdates = [];
   }
-  const combined = [...DEFAULT_UPDATES, ...(Array.isArray(customUpdates) ? customUpdates : [])]
+  const source = Array.isArray(customUpdates) && customUpdates.length ? customUpdates : DEFAULT_UPDATES;
+  const combined = source
     .map(normalizeUpdate)
+    .filter(item => item && !item.archived)
     .filter(Boolean)
     .sort((a, b) => b.createdAt - a.createdAt);
   const latest = combined
