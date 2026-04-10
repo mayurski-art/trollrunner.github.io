@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Troll Runner</title>
+<script>
+(() => {
+  const host = window.location.hostname;
+  const path = window.location.pathname;
+  const redirects = {
+    'blog.trollrunner.net': '/blog/',
+    'nutrition.trollrunner.net': '/nutrition/',
+    'finance.trollrunner.net': '/finance/',
+  };
+  const targetPath = redirects[host];
+  if (targetPath && (path === '/' || path === '/index.html')) {
+    window.location.replace(targetPath);
+  }
+})();
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap');
@@ -858,9 +873,14 @@ footer a:hover { color: #fff; }
   #map-section,
   #updates,
   #feedback,
-  #found-sticker {
+  #found-sticker,
+  #network-sections {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  #network-grid {
+    grid-template-columns: 1fr;
   }
 
   #stats-banner {
@@ -938,9 +958,9 @@ footer a:hover { color: #fff; }
       <h1><img class="title-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation">Troll Runner</h1>
     </div>
     <nav class="header-links" aria-label="Top navigation">
-      <a class="header-link-btn" href="https://blog.trollrunner.net" target="_blank" rel="noopener noreferrer">Blog</a>
-      <a class="header-link-btn" href="https://nutrition.trollrunner.net" target="_blank" rel="noopener noreferrer">Nutrition</a>
-      <a class="header-link-btn" href="https://finance.trollrunner.net" target="_blank" rel="noopener noreferrer">Finance</a>
+      <a class="header-link-btn" href="blog.html">Blog</a>
+      <a class="header-link-btn" href="nutrition.html">Nutrition</a>
+      <a class="header-link-btn" href="finance.html">Finance</a>
     </nav>
     <div class="header-spacer">
       <div class="header-music-controls" aria-label="Music controls">
