@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Troll Runner</title>
+<script>
+(() => {
+  const host = window.location.hostname;
+  const path = window.location.pathname;
+  const redirects = {
+    'blog.trollrunner.net': '/blog/',
+    'nutrition.trollrunner.net': '/nutrition/',
+    'finance.trollrunner.net': '/finance/',
+  };
+  const targetPath = redirects[host];
+  if (targetPath && (path === '/' || path === '/index.html')) {
+    window.location.replace(targetPath);
+  }
+})();
+</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap');
@@ -858,9 +873,14 @@ footer a:hover { color: #fff; }
   #map-section,
   #updates,
   #feedback,
-  #found-sticker {
+  #found-sticker,
+  #network-sections {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  #network-grid {
+    grid-template-columns: 1fr;
   }
 
   #stats-banner {
@@ -964,6 +984,30 @@ footer a:hover { color: #fff; }
   <div class="stat-card"><div class="val">33</div><div class="lbl">Locations</div></div>
   <div class="stat-card"><div class="val">5</div><div class="lbl">Cities</div></div>
 </div>
+
+<section id="network-sections">
+  <h2>Network Sections</h2>
+  <div id="network-grid">
+    <article class="network-card">
+      <span class="network-pill blog">Blog</span>
+      <h3>trollrunner.blog</h3>
+      <p>Build long-form run logs, mission updates, gear notes, and recap posts from each sticker drop.</p>
+      <a class="network-link" href="https://blog.trollrunner.net" target="_blank" rel="noopener noreferrer">Open Blog</a>
+    </article>
+    <article class="network-card">
+      <span class="network-pill nutrition">Nutrition</span>
+      <h3>trollrunner.nutrition</h3>
+      <p>Create pre-run fueling plans, recovery routines, hydration stacks, and weekly meal templates.</p>
+      <a class="network-link" href="https://nutrition.trollrunner.net" target="_blank" rel="noopener noreferrer">Open Nutrition</a>
+    </article>
+    <article class="network-card">
+      <span class="network-pill finance">Finance</span>
+      <h3>trollrunner.finance</h3>
+      <p>Track spending, run project budgets, and publish transparent breakdowns for campaign growth.</p>
+      <a class="network-link" href="https://finance.trollrunner.net" target="_blank" rel="noopener noreferrer">Open Finance</a>
+    </article>
+  </div>
+</section>
 
 <section id="map-section">
   <h2>Sticker Map</h2>
