@@ -941,7 +941,7 @@ footer a:hover { color: #fff; }
   <div class="music-card">
     <div id="spotify-embed" aria-label="Troll Runner Spotify playlist"></div>
     <div class="spotify-controls">
-      <button id="spotify-smart-shuffle" class="spotify-btn" onclick="toggleSpotifySmartShuffle()">Smart Shuffle</button>
+      <button id="spotify-troll-cue" class="spotify-btn" onclick="toggleTrollWordMode()">Troll-word Mode</button>
       <button class="spotify-btn" onclick="spotifyPrevious()">⏮ Prev</button>
       <button id="spotify-play-pause" class="spotify-btn" onclick="toggleSpotifyPlayPause()">▶ Play</button>
       <button class="spotify-btn" onclick="spotifyNext()">Next ⏭</button>
@@ -1108,6 +1108,10 @@ const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
 const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
+const TROLL_WORD_CUES = {
+  // Add manual timestamps like:
+  // 'spotify:track:TRACK_ID': [12, 24]
+};
 const DATA = [
   {city:"Fontana",           name:"Beech Ave",                        date:"Oct 17, 2025", count:1,  px:46, py:44, imageUrl:"https://i.imgur.com/lLd8qJH.jpeg", imageTitle:"Beech Ave, Fontana, California"},
   {city:"Fontana",           name:"Koehler Park",                     date:"Oct 17, 2025", count:1,  px:42, py:50, imageUrl:"https://i.imgur.com/EwbZyfL.jpeg", imageTitle:"Koehler Park, Fontana, California"},
@@ -1165,8 +1169,9 @@ let listResizeStartY = 0;
 let listResizeStartHeight = 0;
 let spotifyEmbedController = null;
 let spotifyIsPlaying = false;
-let spotifySmartShuffleOn = false;
 let spotifyRepeatOn = false;
+let spotifyTrollWordModeOn = false;
+let spotifyCurrentUri = '';
 const DATE_COUNTS = {};
 DATA.forEach(d => {
   d.isoDate = toIsoDate(d.date);
@@ -1182,10 +1187,10 @@ function setSpotifyStatus(message) {
 
 function updateSpotifyButtons() {
   const playBtn = document.getElementById('spotify-play-pause');
-  const shuffleBtn = document.getElementById('spotify-smart-shuffle');
+  const trollCueBtn = document.getElementById('spotify-troll-cue');
   const repeatBtn = document.getElementById('spotify-repeat');
   if (playBtn) playBtn.textContent = spotifyIsPlaying ? '⏸ Pause' : '▶ Play';
-  if (shuffleBtn) shuffleBtn.classList.toggle('active', spotifySmartShuffleOn);
+  if (trollCueBtn) trollCueBtn.classList.toggle('active', spotifyTrollWordModeOn);
   if (repeatBtn) {
     repeatBtn.classList.toggle('active', spotifyRepeatOn);
     repeatBtn.textContent = spotifyRepeatOn ? 'Repeat On' : 'Repeat Off';
@@ -1204,6 +1209,10 @@ window.onSpotifyIframeApiReady = (IFrameAPI) => {
     spotifyEmbedController = EmbedController;
     setSpotifyStatus('Spotify loaded. Use the controls below to play and pause.');
     if (typeof spotifyEmbedController.addListener === 'function') {
+      spotifyEmbedController.addListener('playback_started', (event) => {
+        spotifyCurrentUri = event && event.data && event.data.playingURI ? event.data.playingURI : '';
+        if (spotifyTrollWordModeOn) jumpToTrollWordCue(spotifyCurrentUri);
+      });
       spotifyEmbedController.addListener('playback_update', (event) => {
         if (event && event.data && typeof event.data.isPaused === 'boolean') {
           spotifyIsPlaying = !event.data.isPaused;
@@ -1231,44 +1240,43 @@ function toggleSpotifyPlayPause() {
 }
 
 function spotifyPrevious() {
-  if (!spotifyEmbedController) {
-    setSpotifyStatus('Spotify is still loading.');
-    return;
-  }
-  if (typeof spotifyEmbedController.previous === 'function') {
-    spotifyEmbedController.previous();
-    setSpotifyStatus('Moved to previous track.');
-    return;
-  }
-  setSpotifyStatus('Previous track is not available via this Spotify web embed.');
+  setSpotifyStatus('Spotify iFrame API does not provide a playlist previous-track method.');
 }
 
 function spotifyNext() {
-  if (!spotifyEmbedController) {
-    setSpotifyStatus('Spotify is still loading.');
-    return;
-  }
-  if (typeof spotifyEmbedController.next === 'function') {
-    spotifyEmbedController.next();
-    setSpotifyStatus('Moved to next track.');
-    return;
-  }
-  setSpotifyStatus('Next track is not available via this Spotify web embed.');
+  setSpotifyStatus('Spotify iFrame API does not provide a playlist next-track method.');
 }
 
-function toggleSpotifySmartShuffle() {
-  spotifySmartShuffleOn = !spotifySmartShuffleOn;
+function jumpToTrollWordCue(playingUri) {
+  if (!spotifyEmbedController || !playingUri) return;
+  const cues = TROLL_WORD_CUES[playingUri];
+  if (!Array.isArray(cues) || cues.length === 0) {
+    setSpotifyStatus('No troll-word timestamp is configured for this track yet.');
+    return;
+  }
+  const cueSecond = Math.max(0, Number(cues[0]) - 2);
+  if (typeof spotifyEmbedController.seek === 'function') {
+    spotifyEmbedController.seek(cueSecond);
+    setSpotifyStatus(`Jumped near troll-word cue at ${cueSecond}s.`);
+  }
+}
+
+function toggleTrollWordMode() {
+  spotifyTrollWordModeOn = !spotifyTrollWordModeOn;
   updateSpotifyButtons();
-  setSpotifyStatus(spotifySmartShuffleOn
-    ? 'Smart Shuffle visual mode is on. Spotify web embed may keep playlist order.'
-    : 'Smart Shuffle visual mode is off.');
+  if (!spotifyTrollWordModeOn) {
+    setSpotifyStatus('Troll-word mode off.');
+    return;
+  }
+  setSpotifyStatus('Troll-word mode on. It uses manual timestamp cues per track.');
+  if (spotifyCurrentUri) jumpToTrollWordCue(spotifyCurrentUri);
 }
 
 function toggleSpotifyRepeat() {
   spotifyRepeatOn = !spotifyRepeatOn;
   updateSpotifyButtons();
   setSpotifyStatus(spotifyRepeatOn
-    ? 'Repeat visual mode is on. Spotify web embed may not support repeat toggling.'
+    ? 'Repeat visual mode is on. Spotify iFrame API does not expose repeat control.'
     : 'Repeat visual mode is off.');
 }
 
