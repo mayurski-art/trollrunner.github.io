@@ -99,7 +99,42 @@ header h1 {
 }
 .header-spacer {
   justify-self: end;
-  width: 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 220px;
+}
+.header-music-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.header-music-btn {
+  border: 0.5px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.header-song-wrap {
+  width: 220px;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, #000 10%, #000 90%, transparent 100%);
+}
+.header-song-text {
+  display: inline-block;
+  white-space: nowrap;
+  font-size: 11px;
+  color: rgba(255,255,255,0.74);
+  animation: song-scroll 9s linear infinite;
+}
+@keyframes song-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 header p {
   font-size: 13px;
@@ -127,46 +162,12 @@ header p {
   color: rgba(255,255,255,0.6);
 }
 
-/* ── MUSIC ── */
-#music-player {
-  max-width: 860px;
-  margin: 20px auto 24px;
-  padding: 0 24px;
-}
-.music-card {
-  border: 0.5px solid rgba(255,255,255,0.14);
-  border-radius: 16px;
-  background: rgba(255,255,255,0.03);
-  padding: 14px;
-}
 #spotify-embed {
-  min-height: 152px;
-}
-.spotify-controls {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.spotify-btn {
-  border: 0.5px solid rgba(255,255,255,0.25);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 7px 12px;
-  cursor: pointer;
-}
-.spotify-btn.active {
-  background: #007aff;
-  border-color: #007aff;
-}
-#spotify-status {
-  margin-top: 8px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.62);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ── STATS ROW ── */
@@ -834,7 +835,6 @@ footer a:hover { color: #fff; }
   }
 
   #biography,
-  #music-player,
   #stats-banner,
   #map-section,
   #updates,
@@ -927,27 +927,23 @@ footer a:hover { color: #fff; }
       <a class="header-link-btn" href="https://nutrition.trollrunner.net" target="_blank" rel="noopener noreferrer">Nutrition</a>
       <a class="header-link-btn" href="https://finance.trollrunner.net" target="_blank" rel="noopener noreferrer">Finance</a>
     </nav>
-    <div class="header-spacer" aria-hidden="true"></div>
+    <div class="header-spacer">
+      <div class="header-music-controls" aria-label="Music controls">
+        <button class="header-music-btn" onclick="spotifyPrevious()" aria-label="Previous track">⏮</button>
+        <button id="spotify-play-pause" class="header-music-btn" onclick="toggleSpotifyPlayPause()" aria-label="Play or pause">▶</button>
+        <button class="header-music-btn" onclick="spotifyNext()" aria-label="Next track">⏭</button>
+      </div>
+      <div class="header-song-wrap" aria-live="polite">
+        <span id="spotify-status" class="header-song-text">Loading music…</span>
+      </div>
+      <div id="spotify-embed" aria-label="Troll Runner Spotify playlist" hidden></div>
+    </div>
   </div>
 </header>
 
 <section id="biography">
   <h2>Biography</h2>
   <p>A tracker for troll sticker locations spread across the Inland Empire. Explore the interactive map below to see every drop, filter by city, and follow the mission as it expands across California.</p>
-</section>
-
-<section id="music-player">
-  <h2>Le Troll Playlist</h2>
-  <div class="music-card">
-    <div id="spotify-embed" aria-label="Troll Runner Spotify playlist"></div>
-    <div class="spotify-controls">
-      <button class="spotify-btn" onclick="spotifyPrevious()">⏮ Prev</button>
-      <button id="spotify-play-pause" class="spotify-btn" onclick="toggleSpotifyPlayPause()">▶ Play</button>
-      <button class="spotify-btn" onclick="spotifyNext()">Next ⏭</button>
-      <button id="spotify-repeat" class="spotify-btn" onclick="toggleSpotifyRepeat()">Repeat Off</button>
-    </div>
-    <p id="spotify-status">Loading Spotify playlist controls…</p>
-  </div>
 </section>
 
 <div id="stats-banner">
@@ -1164,7 +1160,7 @@ let listResizeStartY = 0;
 let listResizeStartHeight = 0;
 let spotifyEmbedController = null;
 let spotifyIsPlaying = false;
-let spotifyRepeatOn = false;
+let spotifyTrackLabel = 'No track info yet';
 const DATE_COUNTS = {};
 DATA.forEach(d => {
   d.isoDate = toIsoDate(d.date);
@@ -1180,12 +1176,11 @@ function setSpotifyStatus(message) {
 
 function updateSpotifyButtons() {
   const playBtn = document.getElementById('spotify-play-pause');
-  const repeatBtn = document.getElementById('spotify-repeat');
-  if (playBtn) playBtn.textContent = spotifyIsPlaying ? '⏸ Pause' : '▶ Play';
-  if (repeatBtn) {
-    repeatBtn.classList.toggle('active', spotifyRepeatOn);
-    repeatBtn.textContent = spotifyRepeatOn ? 'Repeat On' : 'Repeat Off';
-  }
+  if (playBtn) playBtn.textContent = spotifyIsPlaying ? '⏸' : '▶';
+}
+
+function updateSongStatus(isPlaying = spotifyIsPlaying) {
+  setSpotifyStatus(`${isPlaying ? 'Now playing' : 'Paused'}: ${spotifyTrackLabel}`);
 }
 
 window.onSpotifyIframeApiReady = (IFrameAPI) => {
@@ -1198,22 +1193,30 @@ window.onSpotifyIframeApiReady = (IFrameAPI) => {
   };
   IFrameAPI.createController(element, options, (EmbedController) => {
     spotifyEmbedController = EmbedController;
-    setSpotifyStatus('Spotify loaded. Use the controls below to play and pause.');
+    setSpotifyStatus('Ready to play');
     if (typeof spotifyEmbedController.addListener === 'function') {
       spotifyEmbedController.addListener('playback_update', (event) => {
+        if (event && event.data && event.data.track && event.data.track.name) {
+          const artistName = event.data.track.artists && event.data.track.artists[0]
+            ? event.data.track.artists[0].name
+            : '';
+          spotifyTrackLabel = artistName ? `${event.data.track.name} — ${artistName}` : event.data.track.name;
+        }
         if (event && event.data && typeof event.data.isPaused === 'boolean') {
           spotifyIsPlaying = !event.data.isPaused;
           updateSpotifyButtons();
+          updateSongStatus();
         }
       });
     }
     updateSpotifyButtons();
+    updateSongStatus(false);
   });
 };
 
 function toggleSpotifyPlayPause() {
   if (!spotifyEmbedController) {
-    setSpotifyStatus('Spotify is still loading.');
+    setSpotifyStatus('Music is still loading…');
     return;
   }
   if (spotifyIsPlaying) {
@@ -1224,22 +1227,31 @@ function toggleSpotifyPlayPause() {
     spotifyIsPlaying = true;
   }
   updateSpotifyButtons();
+  updateSongStatus();
 }
 
 function spotifyPrevious() {
-  setSpotifyStatus('Spotify iFrame API does not provide a playlist previous-track method.');
+  if (!spotifyEmbedController) {
+    setSpotifyStatus('Music is still loading…');
+    return;
+  }
+  if (typeof spotifyEmbedController.previous === 'function') {
+    spotifyEmbedController.previous();
+    return;
+  }
+  setSpotifyStatus('Previous track unavailable in this Spotify embed.');
 }
 
 function spotifyNext() {
-  setSpotifyStatus('Spotify iFrame API does not provide a playlist next-track method.');
-}
-
-function toggleSpotifyRepeat() {
-  spotifyRepeatOn = !spotifyRepeatOn;
-  updateSpotifyButtons();
-  setSpotifyStatus(spotifyRepeatOn
-    ? 'Repeat visual mode is on. Spotify iFrame API does not expose repeat control.'
-    : 'Repeat visual mode is off.');
+  if (!spotifyEmbedController) {
+    setSpotifyStatus('Music is still loading…');
+    return;
+  }
+  if (typeof spotifyEmbedController.next === 'function') {
+    spotifyEmbedController.next();
+    return;
+  }
+  setSpotifyStatus('Next track unavailable in this Spotify embed.');
 }
 
 function toIsoDate(dateStr) {
