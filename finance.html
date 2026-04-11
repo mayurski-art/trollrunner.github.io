@@ -217,25 +217,20 @@ h1 {
 
       <div class="stats">
         <article class="stat">
-          <div class="label">Total Value</div>
-          <div class="value">$124,500</div>
+          <div class="label">$TROLL Balance</div>
+          <div id="troll-balance" class="value">Loading...</div>
         </article>
         <article class="stat">
-          <div class="label">Runway</div>
-          <div class="value">18.4 mo</div>
+          <div class="label">Wallet USD Value</div>
+          <div id="troll-usd" class="value">Loading...</div>
         </article>
         <article class="stat">
           <div class="label">System Status</div>
-          <div class="value">ONLINE</div>
+          <div class="value">Trolling</div>
         </article>
       </div>
 
-      <div class="terminal">&gt; [LOG] BUDGET SYNC COMPLETE
-&gt; [LOG] CAMPAIGN COST BASELINE UPDATED
-&gt; [LOG] GROWTH FORECAST WITHIN TARGET RANGE
-finance@trollrunner:~$</div>
-
-      <section class="donation" aria-label="Troll Fund wallet">
+            <section class="donation" aria-label="Troll Fund wallet">
         <h2>Troll Fund Wallet</h2>
         <p>Donations sent to this wallet power the mission. Conversion rate: <strong>$6.9 = 1 mile</strong>.</p>
         <div class="wallet">79vVRZ7qnZfj9xCto5d9Kwf4eAimqMDrQysZjHBbFbsA</div>
@@ -248,5 +243,59 @@ finance@trollrunner:~$</div>
       </div>
     </section>
   </div>
+  <script>
+    const TROLL_WALLET = "79vVRZ7qnZfj9xCto5d9Kwf4eAimqMDrQysZjHBbFbsA";
+
+    function fmtNumber(value) {
+      return Number(value || 0).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    async function loadTrollStats() {
+      const balanceEl = document.getElementById("troll-balance");
+      const usdEl = document.getElementById("troll-usd");
+
+      try {
+        const res = await fetch(`https://public-api.solscan.io/account/tokens?account=${TROLL_WALLET}`);
+        if (!res.ok) throw new Error(`Token API returned ${res.status}`);
+
+        const tokens = await res.json();
+        const trollToken = (tokens || []).find((token) => {
+          const symbol = (token?.tokenSymbol || token?.symbol || "").toUpperCase();
+          return symbol === "TROLL";
+        });
+
+        if (!trollToken) throw new Error("$TROLL token not found in wallet");
+
+        const amount = Number(
+          trollToken?.tokenAmount?.uiAmount ??
+          trollToken?.amount ??
+          trollToken?.balance ??
+          0
+        );
+
+        const price = Number(
+          trollToken?.tokenPrice?.usd ??
+          trollToken?.priceUsdt ??
+          trollToken?.priceUSD ??
+          trollToken?.price ??
+          0
+        );
+
+        const usdValue = amount * price;
+
+        balanceEl.textContent = `${fmtNumber(amount)} TROLL`;
+        usdEl.textContent = `$${fmtNumber(usdValue)}`;
+      } catch (err) {
+        balanceEl.textContent = "Unavailable";
+        usdEl.textContent = "Unavailable";
+        console.error("Unable to load $TROLL wallet stats", err);
+      }
+    }
+
+    loadTrollStats();
+  </script>
 </body>
 </html>
