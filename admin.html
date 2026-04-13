@@ -84,6 +84,15 @@
     </div>
 
     <div class="card preview">
+      <h3>Phone sync link</h3>
+      <p>Use this when updates appear on your laptop but not on your phone. Open the generated link on your phone once, then the homepage will cache those updates.</p>
+      <div class="row">
+        <button class="secondary" onclick="copySyncLink()">Copy sync link</button>
+      </div>
+      <p id="sync-status"></p>
+    </div>
+
+    <div class="card preview">
       <h3>Feedback to admin system</h3>
       <div id="feedback-preview"></div>
       <div class="row">
@@ -154,6 +163,27 @@
       const serialized = JSON.stringify(items);
       localStorage.setItem(UPDATES_KEY, serialized);
       setCookieValue(UPDATES_KEY, serialized);
+    }
+
+    function encodeUpdatesPayload(items) {
+      const json = JSON.stringify(items);
+      return btoa(unescape(encodeURIComponent(json)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+    }
+
+    function copySyncLink() {
+      const updates = getUpdates();
+      const payload = encodeUpdatesPayload(updates);
+      const url = new URL('index.html', window.location.href);
+      url.searchParams.set('updates', payload);
+      const status = document.getElementById('sync-status');
+      navigator.clipboard.writeText(url.toString()).then(() => {
+        status.textContent = 'Sync link copied. Open it on your phone, then refresh trollrunner.net.';
+      }).catch(() => {
+        status.textContent = `Copy failed. Manually copy this link: ${url.toString()}`;
+      });
     }
 
     function normalizeUpdate(update, source = 'custom') {
