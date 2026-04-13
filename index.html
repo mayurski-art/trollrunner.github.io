@@ -958,9 +958,9 @@ footer a:hover { color: #fff; }
       <h1><img class="title-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation">Troll Runner</h1>
     </div>
     <nav class="header-links" aria-label="Top navigation">
-      <a class="header-link-btn" href="blog.html">Blog</a>
-      <a class="header-link-btn" href="nutrition.html">Nutrition</a>
-      <a class="header-link-btn" href="finance.html">Finance</a>
+      <a class="header-link-btn" href="https://blog.trollrunner.net">Blog</a>
+      <a class="header-link-btn" href="https://nutrition.trollrunner.net">Nutrition</a>
+      <a class="header-link-btn" href="https://finance.trollrunner.net">Finance</a>
     </nav>
     <div class="header-spacer">
       <div class="header-music-controls" aria-label="Music controls">
@@ -1123,6 +1123,10 @@ const ADMIN_UPDATES_KEY = 'trollrunner_updates';
 const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
 const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 4;
+const SUPABASE_URL = '';
+const SUPABASE_ANON_KEY = '';
+const SUPABASE_TABLE = 'site_updates';
+const SUPABASE_ROW_ID = 'main';
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DEFAULT_UPDATES = [
   {
@@ -1849,7 +1853,35 @@ function loadStoredUpdates() {
   return readCookieValue(ADMIN_UPDATES_KEY);
 }
 
-function loadCustomUpdates() {
+function parseSharedUpdatesPayload(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.updates)) return payload.updates;
+  return [];
+}
+
+async function loadSharedUpdatesFromBackend() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+  try {
+    const qs = new URLSearchParams({
+      select: 'updates',
+      id: `eq.${SUPABASE_ROW_ID}`,
+      limit: '1'
+    });
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?${qs.toString()}`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return parseSharedUpdatesPayload(Array.isArray(payload) ? payload[0] : payload);
+  } catch {
+    return [];
+  }
+}
+
+async function loadCustomUpdates() {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;
   let customUpdates = [];
@@ -1858,8 +1890,10 @@ function loadCustomUpdates() {
   } catch {
     customUpdates = [];
   }
+  const sharedUpdates = await loadSharedUpdatesFromBackend();
   const source = [
     ...DEFAULT_UPDATES,
+    ...(Array.isArray(sharedUpdates) ? sharedUpdates : []),
     ...(Array.isArray(customUpdates) ? customUpdates : []),
   ];
   const deduped = [];
