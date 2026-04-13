@@ -61,7 +61,7 @@
 <body>
   <div class="wrap">
     <h1>Troll Runner Admin</h1>
-    <p>Add latest updates quickly. These updates save in your browser and appear on the homepage.</p>
+    <p>Add latest updates quickly. These updates save in browser storage with a cookie fallback and appear on the homepage.</p>
     <p><a href="index.html">← Back to site</a></p>
 
     <div class="card">
@@ -84,6 +84,11 @@
     </div>
 
     <div class="card preview">
+      <h3>Shared backend sync</h3>
+      <p id="sync-state">Shared sync is disabled. Add Supabase config in code to enable cross-device updates.</p>
+    </div>
+
+    <div class="card preview">
       <h3>Feedback to admin system</h3>
       <div id="feedback-preview"></div>
       <div class="row">
@@ -97,6 +102,10 @@
     const UPDATES_KEY = 'trollrunner_updates';
     const FEEDBACK_KEY = 'trollrunner_feedback';
     const MAX_VISIBLE_UPDATES = 4;
+    const SUPABASE_URL = '';
+    const SUPABASE_ANON_KEY = '';
+    const SUPABASE_TABLE = 'site_updates';
+    const SUPABASE_ROW_ID = 'main';
     const DEFAULT_UPDATES = [
       {
         title: 'Oct 10, 2025 — Riverside Adventure',
@@ -129,9 +138,21 @@
       return `update-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     }
 
+    function setCookieValue(name, value) {
+      const maxAge = 60 * 60 * 24 * 365;
+      document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; samesite=lax`;
+    }
+
+    function getCookieValue(name) {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
+      return match ? decodeURIComponent(match[1]) : '';
+    }
+
     function getUpdates() {
       try {
-        const items = JSON.parse(localStorage.getItem(UPDATES_KEY) || '[]');
+        const raw = localStorage.getItem(UPDATES_KEY) || getCookieValue(UPDATES_KEY) || '[]';
+        const items = JSON.parse(raw);
         return Array.isArray(items) ? items : [];
       } catch {
         return [];
@@ -139,7 +160,76 @@
     }
 
     function setUpdates(items) {
-      localStorage.setItem(UPDATES_KEY, JSON.stringify(items));
+      const serialized = JSON.stringify(items);
+      localStorage.setItem(UPDATES_KEY, serialized);
+      setCookieValue(UPDATES_KEY, serialized);
+      pushUpdatesToBackend(items);
+    }
+
+    function parseUpdatesPayload(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (payload && Array.isArray(payload.updates)) return payload.updates;
+      return [];
+    }
+
+    function isSupabaseConfigured() {
+      return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+    }
+
+    function supabaseHeaders() {
+      const headers = {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      };
+      return headers;
+    }
+
+    async function pullUpdatesFromBackend() {
+      if (!isSupabaseConfigured()) return null;
+      const status = document.getElementById('sync-state');
+      status.textContent = 'Loading shared updates from Supabase…';
+      try {
+        const qs = new URLSearchParams({
+          select: 'updates',
+          id: `eq.${SUPABASE_ROW_ID}`,
+          limit: '1'
+        });
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?${qs.toString()}`, {
+          headers: supabaseHeaders(),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const updates = parseUpdatesPayload(Array.isArray(payload) ? payload[0] : payload);
+        status.textContent = `Shared updates loaded (${updates.length} items).`;
+        return updates;
+      } catch (err) {
+        status.textContent = `Shared sync read failed: ${err.message}`;
+        return null;
+      }
+    }
+
+    async function pushUpdatesToBackend(items) {
+      if (!isSupabaseConfigured()) return;
+      const status = document.getElementById('sync-state');
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+          method: 'POST',
+          headers: {
+            ...supabaseHeaders(),
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+          },
+          body: JSON.stringify([{
+            id: SUPABASE_ROW_ID,
+            updates: items,
+            updated_at: new Date().toISOString(),
+          }]),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        status.textContent = `Shared sync updated (${items.length} items).`;
+      } catch (err) {
+        status.textContent = `Shared sync write failed: ${err.message}`;
+      }
     }
 
     function normalizeUpdate(update, source = 'custom') {
@@ -285,8 +375,18 @@
       renderFeedback();
     }
 
-    renderUpdates();
-    renderFeedback();
+    (async () => {
+      const remote = await pullUpdatesFromBackend();
+      if (Array.isArray(remote) && remote.length) {
+        const normalized = remote.map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean);
+        if (normalized.length) setUpdates(normalized);
+      } else if (!isSupabaseConfigured()) {
+        const status = document.getElementById('sync-state');
+        status.textContent = 'Shared sync is disabled. Set SUPABASE_URL and SUPABASE_ANON_KEY to enable cross-device updates.';
+      }
+      renderUpdates();
+      renderFeedback();
+    })();
   </script>
 </body>
 </html>
