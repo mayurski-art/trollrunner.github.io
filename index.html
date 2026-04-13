@@ -1848,34 +1848,6 @@ function loadStoredUpdates() {
   return readCookieValue(ADMIN_UPDATES_KEY);
 }
 
-function decodeUpdatesPayload(payload) {
-  if (!payload) return null;
-  try {
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized + '==='.slice((normalized.length + 3) % 4);
-    const decoded = decodeURIComponent(escape(atob(padded)));
-    const parsed = JSON.parse(decoded);
-    return Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function hydrateUpdatesFromQueryParam() {
-  const params = new URLSearchParams(window.location.search);
-  const payload = params.get('updates');
-  if (!payload) return;
-  const imported = decodeUpdatesPayload(payload);
-  if (!imported) return;
-  const serialized = JSON.stringify(imported);
-  localStorage.setItem(ADMIN_UPDATES_KEY, serialized);
-  setCookieValue(ADMIN_UPDATES_KEY, serialized);
-  params.delete('updates');
-  const nextQuery = params.toString();
-  const cleanUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
-  window.history.replaceState({}, '', cleanUrl);
-}
-
 function loadCustomUpdates() {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;

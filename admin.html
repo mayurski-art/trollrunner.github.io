@@ -165,27 +165,6 @@
       setCookieValue(UPDATES_KEY, serialized);
     }
 
-    function encodeUpdatesPayload(items) {
-      const json = JSON.stringify(items);
-      return btoa(unescape(encodeURIComponent(json)))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/g, '');
-    }
-
-    function copySyncLink() {
-      const updates = getUpdates();
-      const payload = encodeUpdatesPayload(updates);
-      const url = new URL('index.html', window.location.href);
-      url.searchParams.set('updates', payload);
-      const status = document.getElementById('sync-status');
-      navigator.clipboard.writeText(url.toString()).then(() => {
-        status.textContent = 'Sync link copied. Open it on your phone, then refresh trollrunner.net.';
-      }).catch(() => {
-        status.textContent = `Copy failed. Manually copy this link: ${url.toString()}`;
-      });
-    }
-
     function normalizeUpdate(update, source = 'custom') {
       const safeTitle = String(update?.title || '').trim();
       const safeBody = String(update?.body || '').trim();
