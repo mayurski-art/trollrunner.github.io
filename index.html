@@ -1171,6 +1171,7 @@ const SUPABASE_URL = '';
 const SUPABASE_ANON_KEY = '';
 const SUPABASE_TABLE = 'site_updates';
 const SUPABASE_ROW_ID = 'main';
+const SUPABASE_LIVE_STATUS_REFRESH_MS = 10000;
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DEFAULT_UPDATES = [
   {
@@ -1917,11 +1918,20 @@ function parseSharedUpdatesPayload(payload) {
   return [];
 }
 
-async function loadSharedUpdatesFromBackend() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return [];
+function parseSharedLiveStatusPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  if (typeof payload.live_status_enabled === 'boolean') return payload.live_status_enabled;
+  if (payload.live_status_enabled === '1' || payload.live_status_enabled === '0') {
+    return payload.live_status_enabled === '1';
+  }
+  return null;
+}
+
+async function loadSharedStateFromBackend() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { updates: [], liveStatusEnabled: null };
   try {
     const qs = new URLSearchParams({
-      select: 'updates',
+      select: 'updates,live_status_enabled',
       id: `eq.${SUPABASE_ROW_ID}`,
       limit: '1'
     });
@@ -1931,11 +1941,15 @@ async function loadSharedUpdatesFromBackend() {
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       },
     });
-    if (!response.ok) return [];
-    const payload = await response.json();
-    return parseSharedUpdatesPayload(Array.isArray(payload) ? payload[0] : payload);
+    if (!response.ok) return { updates: [], liveStatusEnabled: null };
+    const json = await response.json();
+    const payload = Array.isArray(json) ? json[0] : json;
+    return {
+      updates: parseSharedUpdatesPayload(payload),
+      liveStatusEnabled: parseSharedLiveStatusPayload(payload),
+    };
   } catch {
-    return [];
+    return { updates: [], liveStatusEnabled: null };
   }
 }
 
@@ -1948,7 +1962,12 @@ async function loadCustomUpdates() {
   } catch {
     customUpdates = [];
   }
-  const sharedUpdates = await loadSharedUpdatesFromBackend();
+  const sharedState = await loadSharedStateFromBackend();
+  const sharedUpdates = sharedState.updates;
+  if (sharedState.liveStatusEnabled !== null) {
+    localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
+    applyLiveStatusVisibility();
+  }
   const source = [
     ...DEFAULT_UPDATES,
     ...(Array.isArray(sharedUpdates) ? sharedUpdates : []),
@@ -1976,6 +1995,14 @@ async function loadCustomUpdates() {
     card.innerHTML = `<h3>${u.title}</h3><p>${u.body}</p>`;
     wrap.appendChild(card);
   });
+}
+
+async function refreshLiveStatusFromBackend() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  const sharedState = await loadSharedStateFromBackend();
+  if (sharedState.liveStatusEnabled === null) return;
+  localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
+  applyLiveStatusVisibility();
 }
 
 
@@ -2057,6 +2084,9 @@ document.getElementById('admin-pass').addEventListener('keydown', e => {
 });
 
 initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); initListResizer(); syncSidebarWidthForViewport(); loadCustomUpdates(); removeDuplicateFoundStickerSections();
+if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+  window.setInterval(refreshLiveStatusFromBackend, SUPABASE_LIVE_STATUS_REFRESH_MS);
+}
 </script>
 </body>
 </html>
