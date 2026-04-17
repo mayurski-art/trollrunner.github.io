@@ -86,6 +86,54 @@
     <div class="card preview">
       <h3>Shared backend sync</h3>
       <p id="sync-state">Shared sync is disabled. Add Supabase config in code to enable cross-device updates.</p>
+      <details id="sync-help" style="margin-top:10px;">
+        <summary>Supabase setup help (if sync shows HTTP 404/401)</summary>
+        <pre id="sync-help-sql" style="white-space:pre-wrap;margin-top:8px;font-size:12px;">create table if not exists public.site_updates (
+  id text primary key,
+  updates jsonb not null default '[]'::jsonb,
+  live_status_enabled boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_updates enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_read_site_updates'
+  ) then
+    create policy anon_read_site_updates on public.site_updates
+      for select to anon using (true);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_insert_site_updates'
+  ) then
+    create policy anon_insert_site_updates on public.site_updates
+      for insert to anon with check (true);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_update_site_updates'
+  ) then
+    create policy anon_update_site_updates on public.site_updates
+      for update to anon using (true) with check (true);
+  end if;
+end $$;
+
+insert into public.site_updates (id)
+values ('main')
+on conflict (id) do nothing;</pre>
+      </details>
     </div>
 
     <div class="card preview">
@@ -114,8 +162,10 @@
     const LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
     const MAX_VISIBLE_UPDATES = 4;
     const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
-    const SUPABASE_ANON_KEY = 'your_anon_public_key';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
     const SUPABASE_TABLE = 'site_updates';
+    const SUPABASE_TABLE_FALLBACKS = ['site_updates', 'updates', 'shared_state', 'app_state'];
+    const SUPABASE_TABLE_CACHE_KEY = 'trollrunner_supabase_table';
     const SUPABASE_ROW_ID = 'main';
     const LIVE_STATUS_SYNC_POLL_MS = 10000;
     const DEFAULT_UPDATES = [
@@ -206,6 +256,53 @@
       return headers;
     }
 
+    function getSupabaseTableCandidates() {
+      const cached = localStorage.getItem(SUPABASE_TABLE_CACHE_KEY);
+      const seeded = [cached, SUPABASE_TABLE, ...SUPABASE_TABLE_FALLBACKS].filter(Boolean);
+      return [...new Set(seeded)];
+    }
+
+    function persistSupabaseTableName(tableName) {
+      if (!tableName) return;
+      localStorage.setItem(SUPABASE_TABLE_CACHE_KEY, tableName);
+    }
+
+    function isSupabase404(response) {
+      return response && response.status === 404;
+    }
+
+    async function parseSupabaseError(response) {
+      if (!response) return 'No response from Supabase.';
+      const prefix = `HTTP ${response.status}`;
+      try {
+        const payload = await response.clone().json();
+        const details = [payload?.message, payload?.hint, payload?.details].filter(Boolean).join(' | ');
+        return details ? `${prefix}: ${details}` : prefix;
+      } catch {
+        try {
+          const text = await response.clone().text();
+          return text ? `${prefix}: ${text}` : prefix;
+        } catch {
+          return prefix;
+        }
+      }
+    }
+
+    async function fetchWithTableFallback(buildRequest) {
+      const tables = getSupabaseTableCandidates();
+      let lastResponse = null;
+      for (const table of tables) {
+        const request = buildRequest(table);
+        const response = await fetch(request.url, request.options);
+        if (!isSupabase404(response)) {
+          persistSupabaseTableName(table);
+          return { response, table };
+        }
+        lastResponse = response;
+      }
+      return { response: lastResponse, table: tables[0] || SUPABASE_TABLE };
+    }
+
     async function pullUpdatesFromBackend() {
       if (!isSupabaseConfigured()) return null;
       const status = document.getElementById('sync-state');
@@ -216,10 +313,11 @@
           id: `eq.${SUPABASE_ROW_ID}`,
           limit: '1'
         });
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?${qs.toString()}`, {
-          headers: supabaseHeaders(),
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const { response, table } = await fetchWithTableFallback((tableName) => ({
+          url: `${SUPABASE_URL}/rest/v1/${tableName}?${qs.toString()}`,
+          options: { headers: supabaseHeaders() },
+        }));
+        if (!response.ok) throw new Error(await parseSupabaseError(response));
         const json = await response.json();
         const payload = Array.isArray(json) ? json[0] : json;
         const updates = parseUpdatesPayload(payload);
@@ -228,10 +326,10 @@
           localStorage.setItem(LIVE_STATUS_KEY, liveStatusEnabled ? '1' : '0');
           renderLiveStatusState();
         }
-        status.textContent = `Shared updates loaded (${updates.length} items).`;
+        status.textContent = `Shared updates loaded (${updates.length} items) from "${table}".`;
         return updates;
       } catch (err) {
-        status.textContent = `Shared sync read failed: ${err.message}`;
+        status.textContent = `Shared sync read failed: ${err.message}. Open setup help below and run the SQL in Supabase.`;
         return null;
       }
     }
@@ -240,23 +338,26 @@
       if (!isSupabaseConfigured()) return;
       const status = document.getElementById('sync-state');
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
-          method: 'POST',
-          headers: {
-            ...supabaseHeaders(),
-            Prefer: 'resolution=merge-duplicates,return=minimal',
+        const { response, table } = await fetchWithTableFallback((tableName) => ({
+          url: `${SUPABASE_URL}/rest/v1/${tableName}`,
+          options: {
+            method: 'POST',
+            headers: {
+              ...supabaseHeaders(),
+              Prefer: 'resolution=merge-duplicates,return=minimal',
+            },
+            body: JSON.stringify([{
+              id: SUPABASE_ROW_ID,
+              updates: items,
+              live_status_enabled: localStorage.getItem(LIVE_STATUS_KEY) === '1',
+              updated_at: new Date().toISOString(),
+            }]),
           },
-          body: JSON.stringify([{
-            id: SUPABASE_ROW_ID,
-            updates: items,
-            live_status_enabled: localStorage.getItem(LIVE_STATUS_KEY) === '1',
-            updated_at: new Date().toISOString(),
-          }]),
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        status.textContent = `Shared sync updated (${items.length} items).`;
+        }));
+        if (!response.ok) throw new Error(await parseSupabaseError(response));
+        status.textContent = `Shared sync updated (${items.length} items) in "${table}".`;
       } catch (err) {
-        status.textContent = `Shared sync write failed: ${err.message}`;
+        status.textContent = `Shared sync write failed: ${err.message}. Open setup help below and run the SQL in Supabase.`;
       }
     }
 
@@ -264,22 +365,25 @@
       if (!isSupabaseConfigured()) return;
       const status = document.getElementById('sync-state');
       try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
-          method: 'POST',
-          headers: {
-            ...supabaseHeaders(),
-            Prefer: 'resolution=merge-duplicates,return=minimal',
+        const { response, table } = await fetchWithTableFallback((tableName) => ({
+          url: `${SUPABASE_URL}/rest/v1/${tableName}`,
+          options: {
+            method: 'POST',
+            headers: {
+              ...supabaseHeaders(),
+              Prefer: 'resolution=merge-duplicates,return=minimal',
+            },
+            body: JSON.stringify([{
+              id: SUPABASE_ROW_ID,
+              live_status_enabled: Boolean(enabled),
+              updated_at: new Date().toISOString(),
+            }]),
           },
-          body: JSON.stringify([{
-            id: SUPABASE_ROW_ID,
-            live_status_enabled: Boolean(enabled),
-            updated_at: new Date().toISOString(),
-          }]),
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        status.textContent = `Shared live status synced (${enabled ? 'on' : 'off'}).`;
+        }));
+        if (!response.ok) throw new Error(await parseSupabaseError(response));
+        status.textContent = `Shared live status synced (${enabled ? 'on' : 'off'}) in "${table}".`;
       } catch (err) {
-        status.textContent = `Shared live status write failed: ${err.message}`;
+        status.textContent = `Shared live status write failed: ${err.message}. Open setup help below and run the SQL in Supabase.`;
       }
     }
 
