@@ -117,6 +117,7 @@
     const SUPABASE_ANON_KEY = '';
     const SUPABASE_TABLE = 'site_updates';
     const SUPABASE_ROW_ID = 'main';
+    const LIVE_STATUS_SYNC_POLL_MS = 10000;
     const DEFAULT_UPDATES = [
       {
         title: 'Oct 10, 2025 — Riverside Adventure',
@@ -170,17 +171,26 @@
       }
     }
 
-    function setUpdates(items) {
+    function setUpdates(items, options = {}) {
       const serialized = JSON.stringify(items);
       localStorage.setItem(UPDATES_KEY, serialized);
       setCookieValue(UPDATES_KEY, serialized);
-      pushUpdatesToBackend(items);
+      if (!options.skipPush) pushUpdatesToBackend(items);
     }
 
     function parseUpdatesPayload(payload) {
       if (Array.isArray(payload)) return payload;
       if (payload && Array.isArray(payload.updates)) return payload.updates;
       return [];
+    }
+
+    function parseLiveStatusPayload(payload) {
+      if (!payload || typeof payload !== 'object') return null;
+      if (typeof payload.live_status_enabled === 'boolean') return payload.live_status_enabled;
+      if (payload.live_status_enabled === '1' || payload.live_status_enabled === '0') {
+        return payload.live_status_enabled === '1';
+      }
+      return null;
     }
 
     function isSupabaseConfigured() {
@@ -202,7 +212,7 @@
       status.textContent = 'Loading shared updates from Supabase…';
       try {
         const qs = new URLSearchParams({
-          select: 'updates',
+          select: 'updates,live_status_enabled',
           id: `eq.${SUPABASE_ROW_ID}`,
           limit: '1'
         });
@@ -210,8 +220,14 @@
           headers: supabaseHeaders(),
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
-        const updates = parseUpdatesPayload(Array.isArray(payload) ? payload[0] : payload);
+        const json = await response.json();
+        const payload = Array.isArray(json) ? json[0] : json;
+        const updates = parseUpdatesPayload(payload);
+        const liveStatusEnabled = parseLiveStatusPayload(payload);
+        if (liveStatusEnabled !== null) {
+          localStorage.setItem(LIVE_STATUS_KEY, liveStatusEnabled ? '1' : '0');
+          renderLiveStatusState();
+        }
         status.textContent = `Shared updates loaded (${updates.length} items).`;
         return updates;
       } catch (err) {
@@ -233,6 +249,7 @@
           body: JSON.stringify([{
             id: SUPABASE_ROW_ID,
             updates: items,
+            live_status_enabled: localStorage.getItem(LIVE_STATUS_KEY) === '1',
             updated_at: new Date().toISOString(),
           }]),
         });
@@ -240,6 +257,29 @@
         status.textContent = `Shared sync updated (${items.length} items).`;
       } catch (err) {
         status.textContent = `Shared sync write failed: ${err.message}`;
+      }
+    }
+
+    async function pushLiveStatusToBackend(enabled) {
+      if (!isSupabaseConfigured()) return;
+      const status = document.getElementById('sync-state');
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+          method: 'POST',
+          headers: {
+            ...supabaseHeaders(),
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+          },
+          body: JSON.stringify([{
+            id: SUPABASE_ROW_ID,
+            live_status_enabled: Boolean(enabled),
+            updated_at: new Date().toISOString(),
+          }]),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        status.textContent = `Shared live status synced (${enabled ? 'on' : 'off'}).`;
+      } catch (err) {
+        status.textContent = `Shared live status write failed: ${err.message}`;
       }
     }
 
@@ -396,13 +436,14 @@
     function setLiveStatus(enabled) {
       localStorage.setItem(LIVE_STATUS_KEY, enabled ? '1' : '0');
       renderLiveStatusState();
+      pushLiveStatusToBackend(enabled);
     }
 
     (async () => {
       const remote = await pullUpdatesFromBackend();
       if (Array.isArray(remote) && remote.length) {
         const normalized = remote.map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean);
-        if (normalized.length) setUpdates(normalized);
+        if (normalized.length) setUpdates(normalized, { skipPush: true });
       } else if (!isSupabaseConfigured()) {
         const status = document.getElementById('sync-state');
         status.textContent = 'Shared sync is disabled. Set SUPABASE_URL and SUPABASE_ANON_KEY to enable cross-device updates.';
@@ -410,6 +451,12 @@
       renderUpdates();
       renderFeedback();
       renderLiveStatusState();
+
+      if (isSupabaseConfigured()) {
+        window.setInterval(async () => {
+          await pullUpdatesFromBackend();
+        }, LIVE_STATUS_SYNC_POLL_MS);
+      }
     })();
   </script>
 </body>
