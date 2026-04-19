@@ -86,15 +86,66 @@
     <div class="card preview">
       <h3>Shared backend sync</h3>
       <p id="sync-state">Shared sync is disabled. Add Supabase config in code to enable cross-device updates.</p>
+      <details id="sync-help" style="margin-top:10px;">
+        <summary>Supabase setup help (if sync shows HTTP 404/401)</summary>
+        <pre id="sync-help-sql" style="white-space:pre-wrap;margin-top:8px;font-size:12px;">create table if not exists public.site_updates (
+  id text primary key,
+  updates jsonb not null default '[]'::jsonb,
+  live_status_enabled boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.site_updates enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_read_site_updates'
+  ) then
+    create policy anon_read_site_updates on public.site_updates
+      for select to anon using (true);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_insert_site_updates'
+  ) then
+    create policy anon_insert_site_updates on public.site_updates
+      for insert to anon with check (true);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_update_site_updates'
+  ) then
+    create policy anon_update_site_updates on public.site_updates
+      for update to anon using (true) with check (true);
+  end if;
+end $$;
+
+insert into public.site_updates (id)
+values ('main')
+on conflict (id) do nothing;</pre>
+      </details>
     </div>
 
     <div class="card preview">
       <h3>Live status popup control</h3>
       <p>Toggle the homepage live popup shown below the Blog / Nutrition / Finance buttons.</p>
       <p id="live-status-state">Live popup is currently off.</p>
+      <label for="status-message-input">Latest update message</label>
+      <textarea id="status-message-input" placeholder="Write the latest update message shown on the homepage..."></textarea>
       <div class="row">
         <button onclick="setLiveStatus(true)">Turn live popup on</button>
         <button class="secondary" onclick="setLiveStatus(false)">Turn live popup off</button>
+        <button onclick="saveStatusMessage()">Save latest update message</button>
       </div>
     </div>
 
@@ -178,7 +229,13 @@
       const serialized = JSON.stringify(items);
       localStorage.setItem(UPDATES_KEY, serialized);
       setCookieValue(UPDATES_KEY, serialized);
-      if (!options.skipPush) pushUpdatesToBackend(items);
+      if (!options.skipPush) {
+        const newest = (Array.isArray(items) ? items : []).find(item => !item.archived);
+        if (newest?.body) {
+          document.getElementById('status-message-input').value = String(newest.body);
+          saveStatusMessage();
+        }
+      }
     }
 
     function parseUpdatesPayload(payload) {
@@ -426,7 +483,22 @@
     function setLiveStatus(enabled) {
       localStorage.setItem(LIVE_STATUS_KEY, enabled ? '1' : '0');
       renderLiveStatusState();
-      pushLiveStatusToBackend(enabled);
+      updateStatusRow({ live: Boolean(enabled) });
+    }
+
+    function saveStatusMessage() {
+      const message = String(document.getElementById('status-message-input').value || '').trim();
+      updateStatusRow({ message });
+    }
+
+    function subscribeToStatusRealtime() {
+      if (!supabaseClient) return;
+      supabaseClient
+        .channel('admin-status-stream')
+        .on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_STATUS_TABLE }, async () => {
+          await pullStatusFromBackend();
+        })
+        .subscribe();
     }
 
     function subscribeToStatusRealtime() {
@@ -445,11 +517,8 @@
     }
 
     (async () => {
-      const remote = await pullUpdatesFromBackend();
-      if (Array.isArray(remote)) {
-        const normalized = remote.map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean);
-        setUpdates(normalized, { skipPush: true });
-      } else if (!isSupabaseConfigured()) {
+      const remoteStatus = await pullStatusFromBackend();
+      if (!remoteStatus && !isSupabaseConfigured()) {
         const status = document.getElementById('sync-state');
         status.textContent = 'Shared sync is disabled. Set SUPABASE_URL and SUPABASE_ANON_KEY to enable cross-device updates.';
       }

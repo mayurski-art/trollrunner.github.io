@@ -103,7 +103,7 @@ header h1 {
   gap: 10px;
 }
 .header-live-pill {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   border: 0.5px solid rgba(255,255,255,0.22);
@@ -1004,7 +1004,7 @@ footer a:hover { color: #fff; }
       </div>
       <div id="live-status-pill" class="header-live-pill" aria-live="polite">
         <span class="header-live-dot" aria-hidden="true"></span>
-        <span>Live: Currently trolling around...</span>
+        <span id="live-status-text">Offline</span>
       </div>
     </nav>
     <div class="header-spacer">
@@ -1275,6 +1275,7 @@ let calendarMonth = allDropDates.length ? new Date(`${allDropDates[allDropDates.
 
 function applyLiveStatusVisibility(enabled = localStorage.getItem(LIVE_STATUS_KEY) === '1') {
   const livePill = document.getElementById('live-status-pill');
+  const liveText = document.getElementById('live-status-text');
   if (!livePill) return;
   livePill.classList.toggle('is-visible', enabled);
 }
@@ -1944,56 +1945,27 @@ async function loadSharedStateFromBackend() {
     if (error) return { updates: [], liveStatusEnabled: null };
     const payload = data || {};
     return {
-      updates: parseSharedUpdatesPayload(payload),
-      liveStatusEnabled: parseSharedLiveStatusPayload(payload),
+      liveStatusEnabled: typeof payload.live === 'boolean' ? payload.live : null,
+      message: String(payload.message || ''),
     };
   } catch {
-    return { updates: [], liveStatusEnabled: null };
+    return { liveStatusEnabled: null, message: '' };
   }
 }
 
 async function loadCustomUpdates(sharedStateOverride = null) {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;
-  let customUpdates = [];
-  try {
-    customUpdates = JSON.parse(loadStoredUpdates() || '[]');
-  } catch {
-    customUpdates = [];
-  }
   const sharedState = sharedStateOverride || await loadSharedStateFromBackend();
-  const sharedUpdates = sharedState.updates;
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
     applyLiveStatusVisibility(sharedState.liveStatusEnabled);
   }
-  const source = [
-    ...DEFAULT_UPDATES,
-    ...(Array.isArray(sharedUpdates) ? sharedUpdates : []),
-    ...(Array.isArray(customUpdates) ? customUpdates : []),
-  ];
-  const deduped = [];
-  const seen = new Set();
-  source.forEach(item => {
-    const normalized = normalizeUpdate(item);
-    if (!normalized || normalized.archived) return;
-    const key = `${normalized.title}::${normalized.body}::${normalized.createdAt}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    deduped.push(normalized);
-  });
-
-  const latest = deduped
-    .sort((a, b) => b.createdAt - a.createdAt);
-  const visible = latest.slice(0, MAX_VISIBLE_UPDATES);
-
   wrap.innerHTML = '';
-  visible.forEach(u => {
-    const card = document.createElement('div');
-    card.className = 'update-card';
-    card.innerHTML = `<h3>${u.title}</h3><p>${u.body}</p>`;
-    wrap.appendChild(card);
-  });
+  const card = document.createElement('div');
+  card.className = 'update-card';
+  card.innerHTML = `<h3>Latest Update</h3><p>${sharedState.message || 'No update available yet.'}</p>`;
+  wrap.appendChild(card);
 }
 
 async function refreshSharedStateFromBackend() {
