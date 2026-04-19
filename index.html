@@ -103,7 +103,7 @@ header h1 {
   gap: 10px;
 }
 .header-live-pill {
-  display: none;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   border: 0.5px solid rgba(255,255,255,0.22);
@@ -1004,7 +1004,7 @@ footer a:hover { color: #fff; }
       </div>
       <div id="live-status-pill" class="header-live-pill" aria-live="polite">
         <span class="header-live-dot" aria-hidden="true"></span>
-        <span>Live: Currently trolling around...</span>
+        <span id="live-status-text">Offline</span>
       </div>
     </nav>
     <div class="header-spacer">
@@ -1161,6 +1161,7 @@ footer a:hover { color: #fff; }
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://open.spotify.com/embed/iframe-api/v1" async></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
@@ -1169,11 +1170,8 @@ const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 4;
 const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
-const SUPABASE_TABLE = 'site_updates';
-const SUPABASE_TABLE_FALLBACKS = ['site_updates', 'updates', 'shared_state', 'app_state'];
-const SUPABASE_TABLE_CACHE_KEY = 'trollrunner_supabase_table';
-const SUPABASE_ROW_ID = 'main';
-const SUPABASE_SHARED_STATE_REFRESH_MS = 10000;
+const SUPABASE_STATUS_TABLE = 'status';
+const SUPABASE_STATUS_ID = 1;
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DEFAULT_UPDATES = [
   {
@@ -1260,6 +1258,9 @@ const geoInflight = new Set();
 const ENABLE_LIVE_GEOCODING = false;
 const spotifyTrackLabelCache = new Map();
 const LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
+const supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 const DATE_COUNTS = {};
 DATA.forEach(d => {
   d.isoDate = toIsoDate(d.date);
@@ -1268,11 +1269,12 @@ DATA.forEach(d => {
 const allDropDates = Object.keys(DATE_COUNTS).sort();
 let calendarMonth = allDropDates.length ? new Date(`${allDropDates[allDropDates.length-1]}T00:00:00`) : new Date();
 
-function applyLiveStatusVisibility() {
+function applyLiveStatusVisibility(enabled = localStorage.getItem(LIVE_STATUS_KEY) === '1') {
   const livePill = document.getElementById('live-status-pill');
+  const liveText = document.getElementById('live-status-text');
   if (!livePill) return;
-  const enabled = localStorage.getItem(LIVE_STATUS_KEY) === '1';
-  livePill.classList.toggle('is-visible', enabled);
+  livePill.classList.add('is-visible');
+  if (liveText) liveText.textContent = enabled ? 'Live: Currently trolling around...' : 'Offline';
 }
 
 window.addEventListener('storage', (event) => {
@@ -1981,81 +1983,57 @@ async function fetchSharedStateWithTableFallback(queryString) {
 }
 
 async function loadSharedStateFromBackend() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { updates: [], liveStatusEnabled: null };
+  if (!supabaseClient) return { liveStatusEnabled: null, message: '' };
   try {
-    const qs = new URLSearchParams({
-      select: 'updates,live_status_enabled',
-      id: `eq.${SUPABASE_ROW_ID}`,
-      limit: '1'
-    });
-    const response = await fetchSharedStateWithTableFallback(qs.toString());
-    if (!response.ok) {
-      console.warn('Shared sync read failed on homepage:', await parseSupabaseError(response));
-      return { updates: [], liveStatusEnabled: null };
-    }
-    const json = await response.json();
-    const payload = Array.isArray(json) ? json[0] : json;
+    const { data, error } = await supabaseClient
+      .from(SUPABASE_STATUS_TABLE)
+      .select('live,message,updated_at')
+      .eq('id', SUPABASE_STATUS_ID)
+      .maybeSingle();
+    if (error) return { liveStatusEnabled: null, message: '' };
+    const payload = data || {};
     return {
-      updates: parseSharedUpdatesPayload(payload),
-      liveStatusEnabled: parseSharedLiveStatusPayload(payload),
+      liveStatusEnabled: typeof payload.live === 'boolean' ? payload.live : null,
+      message: String(payload.message || ''),
     };
   } catch {
-    return { updates: [], liveStatusEnabled: null };
+    return { liveStatusEnabled: null, message: '' };
   }
 }
 
 async function loadCustomUpdates(sharedStateOverride = null) {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;
-  let customUpdates = [];
-  try {
-    customUpdates = JSON.parse(loadStoredUpdates() || '[]');
-  } catch {
-    customUpdates = [];
-  }
   const sharedState = sharedStateOverride || await loadSharedStateFromBackend();
-  const sharedUpdates = sharedState.updates;
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
-    applyLiveStatusVisibility();
+    applyLiveStatusVisibility(sharedState.liveStatusEnabled);
   }
-  const source = [
-    ...DEFAULT_UPDATES,
-    ...(Array.isArray(sharedUpdates) ? sharedUpdates : []),
-    ...(Array.isArray(customUpdates) ? customUpdates : []),
-  ];
-  const deduped = [];
-  const seen = new Set();
-  source.forEach(item => {
-    const normalized = normalizeUpdate(item);
-    if (!normalized || normalized.archived) return;
-    const key = `${normalized.title}::${normalized.body}::${normalized.createdAt}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    deduped.push(normalized);
-  });
-
-  const latest = deduped
-    .sort((a, b) => b.createdAt - a.createdAt);
-  const visible = latest.slice(0, MAX_VISIBLE_UPDATES);
-
   wrap.innerHTML = '';
-  visible.forEach(u => {
-    const card = document.createElement('div');
-    card.className = 'update-card';
-    card.innerHTML = `<h3>${u.title}</h3><p>${u.body}</p>`;
-    wrap.appendChild(card);
-  });
+  const card = document.createElement('div');
+  card.className = 'update-card';
+  card.innerHTML = `<h3>Latest Update</h3><p>${sharedState.message || 'No update available yet.'}</p>`;
+  wrap.appendChild(card);
 }
 
 async function refreshSharedStateFromBackend() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+  if (!supabaseClient) return;
   const sharedState = await loadSharedStateFromBackend();
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
-    applyLiveStatusVisibility();
+    applyLiveStatusVisibility(sharedState.liveStatusEnabled);
   }
   await loadCustomUpdates(sharedState);
+}
+
+function subscribeToStatusRealtime() {
+  if (!supabaseClient) return;
+  supabaseClient
+    .channel('public-status-stream')
+    .on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_STATUS_TABLE }, async () => {
+      await refreshSharedStateFromBackend();
+    })
+    .subscribe();
 }
 
 
@@ -2136,10 +2114,7 @@ document.getElementById('admin-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') goToAdmin();
 });
 
-initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); initListResizer(); syncSidebarWidthForViewport(); loadCustomUpdates(); removeDuplicateFoundStickerSections();
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  window.setInterval(refreshSharedStateFromBackend, SUPABASE_SHARED_STATE_REFRESH_MS);
-}
+initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); initListResizer(); syncSidebarWidthForViewport(); loadCustomUpdates(); subscribeToStatusRealtime(); removeDuplicateFoundStickerSections();
 </script>
 </body>
 </html>
