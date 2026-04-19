@@ -1931,6 +1931,57 @@ function parseSharedLiveStatusPayload(payload) {
   return null;
 }
 
+function getSupabaseTableCandidates() {
+  const cached = localStorage.getItem(SUPABASE_TABLE_CACHE_KEY);
+  const seeded = [cached, SUPABASE_TABLE, ...SUPABASE_TABLE_FALLBACKS].filter(Boolean);
+  return [...new Set(seeded)];
+}
+
+function persistSupabaseTableName(tableName) {
+  if (!tableName) return;
+  localStorage.setItem(SUPABASE_TABLE_CACHE_KEY, tableName);
+}
+
+function isSupabase404(response) {
+  return response && response.status === 404;
+}
+
+async function parseSupabaseError(response) {
+  if (!response) return 'No response from Supabase.';
+  const prefix = `HTTP ${response.status}`;
+  try {
+    const payload = await response.clone().json();
+    const details = [payload?.message, payload?.hint, payload?.details].filter(Boolean).join(' | ');
+    return details ? `${prefix}: ${details}` : prefix;
+  } catch {
+    try {
+      const text = await response.clone().text();
+      return text ? `${prefix}: ${text}` : prefix;
+    } catch {
+      return prefix;
+    }
+  }
+}
+
+async function fetchSharedStateWithTableFallback(queryString) {
+  const tables = getSupabaseTableCandidates();
+  let lastResponse = null;
+  for (const tableName of tables) {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?${queryString}`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+    if (!isSupabase404(response)) {
+      persistSupabaseTableName(tableName);
+      return response;
+    }
+    lastResponse = response;
+  }
+  return lastResponse;
+}
+
 async function loadSharedStateFromBackend() {
   if (!supabaseClient) return { liveStatusEnabled: null, message: '' };
   try {
