@@ -86,66 +86,15 @@
     <div class="card preview">
       <h3>Shared backend sync</h3>
       <p id="sync-state">Shared sync is disabled. Add Supabase config in code to enable cross-device updates.</p>
-      <details id="sync-help" style="margin-top:10px;">
-        <summary>Supabase setup help (if sync shows HTTP 404/401)</summary>
-        <pre id="sync-help-sql" style="white-space:pre-wrap;margin-top:8px;font-size:12px;">create table if not exists public.site_updates (
-  id text primary key,
-  updates jsonb not null default '[]'::jsonb,
-  live_status_enabled boolean not null default false,
-  updated_at timestamptz not null default now()
-);
-
-alter table public.site_updates enable row level security;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_read_site_updates'
-  ) then
-    create policy anon_read_site_updates on public.site_updates
-      for select to anon using (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_insert_site_updates'
-  ) then
-    create policy anon_insert_site_updates on public.site_updates
-      for insert to anon with check (true);
-  end if;
-end $$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'site_updates' and policyname = 'anon_update_site_updates'
-  ) then
-    create policy anon_update_site_updates on public.site_updates
-      for update to anon using (true) with check (true);
-  end if;
-end $$;
-
-insert into public.site_updates (id)
-values ('main')
-on conflict (id) do nothing;</pre>
-      </details>
     </div>
 
     <div class="card preview">
       <h3>Live status popup control</h3>
       <p>Toggle the homepage live popup shown below the Blog / Nutrition / Finance buttons.</p>
       <p id="live-status-state">Live popup is currently off.</p>
-      <label for="status-message-input">Latest update message</label>
-      <textarea id="status-message-input" placeholder="Write the latest update message shown on the homepage..."></textarea>
       <div class="row">
         <button onclick="setLiveStatus(true)">Turn live popup on</button>
         <button class="secondary" onclick="setLiveStatus(false)">Turn live popup off</button>
-        <button onclick="saveStatusMessage()">Save latest update message</button>
       </div>
     </div>
 
@@ -158,20 +107,17 @@ on conflict (id) do nothing;</pre>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const AUTH_KEY = 'trollrunner_admin_auth';
     const UPDATES_KEY = 'trollrunner_updates';
     const FEEDBACK_KEY = 'trollrunner_feedback';
     const LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
     const MAX_VISIBLE_UPDATES = 4;
-    // Supabase setup (replace only if project values change):
-    // 1) SUPABASE_URL -> your project URL
-    // 2) SUPABASE_ANON_KEY -> your anon public API key
-    const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
+    const SUPABASE_URL = '';
+    const SUPABASE_ANON_KEY = '';
     const SUPABASE_TABLE = 'site_updates';
     const SUPABASE_ROW_ID = 'main';
+    const LIVE_STATUS_SYNC_POLL_MS = 10000;
     const DEFAULT_UPDATES = [
       {
         title: 'Oct 10, 2025 — Riverside Adventure',
@@ -229,13 +175,7 @@ on conflict (id) do nothing;</pre>
       const serialized = JSON.stringify(items);
       localStorage.setItem(UPDATES_KEY, serialized);
       setCookieValue(UPDATES_KEY, serialized);
-      if (!options.skipPush) {
-        const newest = (Array.isArray(items) ? items : []).find(item => !item.archived);
-        if (newest?.body) {
-          document.getElementById('status-message-input').value = String(newest.body);
-          saveStatusMessage();
-        }
-      }
+      if (!options.skipPush) pushUpdatesToBackend(items);
     }
 
     function parseUpdatesPayload(payload) {
@@ -253,81 +193,94 @@ on conflict (id) do nothing;</pre>
       return null;
     }
 
-    // Must initialize before any supabase.from(...) usage.
-    const supabaseClient = (window.supabase && typeof window.supabase.createClient === 'function')
-      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-      : null;
-
     function isSupabaseConfigured() {
-      return Boolean(supabaseClient);
+      return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
     }
 
-    async function readSharedRowFromBackend() {
-      if (!supabaseClient) return null;
+    function supabaseHeaders() {
+      const headers = {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      };
+      return headers;
+    }
+
+    async function pullUpdatesFromBackend() {
+      if (!isSupabaseConfigured()) return null;
+      const status = document.getElementById('sync-state');
+      status.textContent = 'Loading shared updates from Supabase…';
       try {
-        const { data, error } = await supabaseClient
-          .from(SUPABASE_TABLE)
-          .select('*')
-          .eq('id', SUPABASE_ROW_ID)
-          .maybeSingle();
-        if (error) throw error;
-        return data || null;
+        const qs = new URLSearchParams({
+          select: 'updates,live_status_enabled',
+          id: `eq.${SUPABASE_ROW_ID}`,
+          limit: '1'
+        });
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?${qs.toString()}`, {
+          headers: supabaseHeaders(),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        const payload = Array.isArray(json) ? json[0] : json;
+        const updates = parseUpdatesPayload(payload);
+        const liveStatusEnabled = parseLiveStatusPayload(payload);
+        if (liveStatusEnabled !== null) {
+          localStorage.setItem(LIVE_STATUS_KEY, liveStatusEnabled ? '1' : '0');
+          renderLiveStatusState();
+        }
+        status.textContent = `Shared updates loaded (${updates.length} items).`;
+        return updates;
       } catch (err) {
-        const status = document.getElementById('sync-state');
         status.textContent = `Shared sync read failed: ${err.message}`;
         return null;
       }
     }
 
-    async function upsertMergedSharedRow(patch) {
-      if (!supabaseClient) return false;
+    async function pushUpdatesToBackend(items) {
+      if (!isSupabaseConfigured()) return;
       const status = document.getElementById('sync-state');
       try {
-        const existing = await readSharedRowFromBackend();
-        const merged = {
-          id: SUPABASE_ROW_ID,
-          updates: Array.isArray(patch?.updates)
-            ? patch.updates
-            : (Array.isArray(existing?.updates) ? existing.updates : []),
-          live_status_enabled: (typeof patch?.live_status_enabled === 'boolean')
-            ? patch.live_status_enabled
-            : parseLiveStatusPayload(existing),
-          updated_at: new Date().toISOString(),
-        };
-        const { error } = await supabaseClient
-          .from(SUPABASE_TABLE)
-          .upsert(merged, { onConflict: 'id' });
-        if (error) throw error;
-        status.textContent = 'Shared sync updated.';
-        return true;
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+          method: 'POST',
+          headers: {
+            ...supabaseHeaders(),
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+          },
+          body: JSON.stringify([{
+            id: SUPABASE_ROW_ID,
+            updates: items,
+            live_status_enabled: localStorage.getItem(LIVE_STATUS_KEY) === '1',
+            updated_at: new Date().toISOString(),
+          }]),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        status.textContent = `Shared sync updated (${items.length} items).`;
       } catch (err) {
         status.textContent = `Shared sync write failed: ${err.message}`;
-        return false;
       }
-    }
-
-    async function pullUpdatesFromBackend() {
-      if (!supabaseClient) return null;
-      const status = document.getElementById('sync-state');
-      status.textContent = 'Loading shared updates from Supabase…';
-      const row = await readSharedRowFromBackend();
-      if (!row) return null;
-      const updates = parseUpdatesPayload(row);
-      const liveStatusEnabled = parseLiveStatusPayload(row);
-      if (liveStatusEnabled !== null) {
-        localStorage.setItem(LIVE_STATUS_KEY, liveStatusEnabled ? '1' : '0');
-        renderLiveStatusState();
-      }
-      status.textContent = `Shared updates loaded (${updates.length} items).`;
-      return updates;
-    }
-
-    async function pushUpdatesToBackend(items) {
-      await upsertMergedSharedRow({ updates: items });
     }
 
     async function pushLiveStatusToBackend(enabled) {
-      await upsertMergedSharedRow({ live_status_enabled: Boolean(enabled) });
+      if (!isSupabaseConfigured()) return;
+      const status = document.getElementById('sync-state');
+      try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+          method: 'POST',
+          headers: {
+            ...supabaseHeaders(),
+            Prefer: 'resolution=merge-duplicates,return=minimal',
+          },
+          body: JSON.stringify([{
+            id: SUPABASE_ROW_ID,
+            live_status_enabled: Boolean(enabled),
+            updated_at: new Date().toISOString(),
+          }]),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        status.textContent = `Shared live status synced (${enabled ? 'on' : 'off'}).`;
+      } catch (err) {
+        status.textContent = `Shared live status write failed: ${err.message}`;
+      }
     }
 
     function normalizeUpdate(update, source = 'custom') {
@@ -483,49 +436,27 @@ on conflict (id) do nothing;</pre>
     function setLiveStatus(enabled) {
       localStorage.setItem(LIVE_STATUS_KEY, enabled ? '1' : '0');
       renderLiveStatusState();
-      updateStatusRow({ live: Boolean(enabled) });
-    }
-
-    function saveStatusMessage() {
-      const message = String(document.getElementById('status-message-input').value || '').trim();
-      updateStatusRow({ message });
-    }
-
-    function subscribeToStatusRealtime() {
-      if (!supabaseClient) return;
-      supabaseClient
-        .channel('admin-status-stream')
-        .on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_STATUS_TABLE }, async () => {
-          await pullStatusFromBackend();
-        })
-        .subscribe();
-    }
-
-    function subscribeToStatusRealtime() {
-      if (!supabaseClient) return;
-      supabaseClient
-        .channel('admin-status-stream')
-        .on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_TABLE }, async () => {
-          const latestRemote = await pullUpdatesFromBackend();
-          if (Array.isArray(latestRemote)) {
-            const normalized = latestRemote.map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean);
-            setUpdates(normalized, { skipPush: true });
-            renderUpdates();
-          }
-        })
-        .subscribe();
+      pushLiveStatusToBackend(enabled);
     }
 
     (async () => {
-      const remoteStatus = await pullStatusFromBackend();
-      if (!remoteStatus && !isSupabaseConfigured()) {
+      const remote = await pullUpdatesFromBackend();
+      if (Array.isArray(remote) && remote.length) {
+        const normalized = remote.map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean);
+        if (normalized.length) setUpdates(normalized, { skipPush: true });
+      } else if (!isSupabaseConfigured()) {
         const status = document.getElementById('sync-state');
         status.textContent = 'Shared sync is disabled. Set SUPABASE_URL and SUPABASE_ANON_KEY to enable cross-device updates.';
       }
       renderUpdates();
       renderFeedback();
       renderLiveStatusState();
-      subscribeToStatusRealtime();
+
+      if (isSupabaseConfigured()) {
+        window.setInterval(async () => {
+          await pullUpdatesFromBackend();
+        }, LIVE_STATUS_SYNC_POLL_MS);
+      }
     })();
   </script>
 </body>
