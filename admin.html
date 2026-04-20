@@ -382,6 +382,7 @@
 
     async function setLiveStatus(enabled) {
       localStorage.setItem(LIVE_STATUS_KEY, enabled ? '1' : '0');
+      localStorage.setItem(LIVE_STATUS_OVERRIDE_KEY, '1');
       renderLiveStatusState();
       const synced = await persistLiveStatusToBackend(enabled);
       if (!synced) {
