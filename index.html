@@ -700,6 +700,7 @@ header p {
   font-size: 13px;
   line-height: 1.6;
   color: #4a4a4a;                  /* readable gray for description */
+  white-space: pre-line;
 }
 
 .feedback-field {
@@ -1174,24 +1175,36 @@ const SUPABASE_TABLE_FALLBACKS = ['site_updates', 'updates', 'shared_state', 'ap
 const SUPABASE_TABLE_CACHE_KEY = 'trollrunner_supabase_table';
 const SUPABASE_ROW_ID = 'main';
 const SUPABASE_SHARED_STATE_REFRESH_MS = 10000;
+const SHARED_UPDATES_JSON_URL = 'assets/data/latest-updates.json';
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DEFAULT_UPDATES = [
   {
-    title: 'Oct 10, 2025 — Riverside Adventure',
-    body: 'Scattered 5 stickers along Main Street and 3 at the Riverside Plaza. Fun run with unexpected obstacles!',
-    createdAt: '2025-10-10T00:00:00.000Z',
+    title: 'April 18, 2026',
+    body: "All sticker images fully uploaded ;) including today's. One away from 100... A thousand more miles before I ever think about giving up on my community. I remain frustrated with trying to get the syncing. Now I have to copy pasta this same update message for mobile devices...",
+    createdAt: '2026-04-18T21:00:00.000Z',
   },
   {
-    title: 'Nov 25, 2025 — Fontana Marathon',
-    body: 'Added 2 stickers at Central City Park and 2 at Seville Park. Downtown Fontana saw 8 new drops.',
-    createdAt: '2025-11-25T00:00:00.000Z',
+    title: 'April 16, 2026',
+    body: '- Added "Live: Currently trolling around" sign spotted below the subdomain buttons "Blog, Nutrition, Finance".
+- Noticed $TROLL balance and USD value does not show up sometimes despite waiting a minute after refreshing... monitoring the trollituation (ok i tried to combine troll with situation.... bad joke).
+- Looked into improving UI for finance.trollrunner.net. Added copy fund wallet address button.
+- Shared backend sync for "Latest Update" needs further investigating.',
+    createdAt: '2026-04-16T21:00:00.000Z',
   },
   {
-    title: 'April 4, 2026 — Chino Hills Drop',
-    body: 'Placed 6 stickers at Vila Borba Park and 1 at Chino Hills Dog Park. Great run with some sneaky spots added!',
-    createdAt: '2026-04-04T00:00:00.000Z',
+    title: 'April 13, 2026',
+    body: 'Starting to look into the issue of "Latest Updates" not syncing from laptop to mobile devices. :( I want y'all to get the latest updates duhhh.',
+    createdAt: '2026-04-13T21:00:00.000Z',
   },
-];
+  {
+    title: 'April 12, 2026',
+    body: 'Took two days off working on the site, came back for some late night web-building for a couple hours... *yawnnnnnnnnnn*...
+- Built finance.trollrunner.net, tried to add section where transfer autopopulate but had some trouble.
+- I did however fix the issue of having updated price action (amount of $TROLL correlating to current USD prices, quite the hurdle).
+- Started building blog.trollrunner.net. Lots planned for this. If you read this throw some tokens into the funding wallet ;) Trololololololo',
+    createdAt: '2026-04-12T21:00:00.000Z',
+  },
+]
 const DATA = [
   {city:"Fontana",           name:"Beech Ave",                        date:"Oct 17, 2025", count:1,  px:46, py:44, imageUrl:"https://i.imgur.com/lLd8qJH.jpeg", imageTitle:"Beech Ave, Fontana, California"},
   {city:"Fontana",           name:"Koehler Park",                     date:"Oct 17, 2025", count:1,  px:42, py:50, imageUrl:"https://i.imgur.com/EwbZyfL.jpeg", imageTitle:"Koehler Park, Fontana, California"},
@@ -1935,6 +1948,14 @@ function parseSharedLiveStatusPayload(payload) {
   return null;
 }
 
+function parseJsonSharedStatePayload(payload) {
+  if (!payload || typeof payload !== 'object') return { updates: [], liveStatusEnabled: null };
+  return {
+    updates: parseSharedUpdatesPayload(payload),
+    liveStatusEnabled: null,
+  };
+}
+
 function getSupabaseTableCandidates() {
   const cached = localStorage.getItem(SUPABASE_TABLE_CACHE_KEY);
   const seeded = [cached, SUPABASE_TABLE, ...SUPABASE_TABLE_FALLBACKS].filter(Boolean);
@@ -2010,6 +2031,35 @@ async function loadSharedStateFromBackend() {
   }
 }
 
+async function loadSharedStateFromJsonEndpoint() {
+  if (!SHARED_UPDATES_JSON_URL) return { updates: [], liveStatusEnabled: null };
+  try {
+    const response = await fetch(`${SHARED_UPDATES_JSON_URL}?v=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return { updates: [], liveStatusEnabled: null };
+    const payload = await response.json();
+    return parseJsonSharedStatePayload(payload);
+  } catch {
+    return { updates: [], liveStatusEnabled: null };
+  }
+}
+
+async function loadSharedState() {
+  const [supabaseState, jsonState] = await Promise.all([
+    loadSharedStateFromBackend(),
+    loadSharedStateFromJsonEndpoint(),
+  ]);
+  return {
+    updates: [
+      ...(Array.isArray(supabaseState.updates) ? supabaseState.updates : []),
+      ...(Array.isArray(jsonState.updates) ? jsonState.updates : []),
+    ],
+    liveStatusEnabled:
+      typeof supabaseState.liveStatusEnabled === 'boolean'
+        ? supabaseState.liveStatusEnabled
+        : jsonState.liveStatusEnabled,
+  };
+}
+
 async function loadCustomUpdates(sharedStateOverride = null) {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;
@@ -2019,7 +2069,7 @@ async function loadCustomUpdates(sharedStateOverride = null) {
   } catch {
     customUpdates = [];
   }
-  const sharedState = sharedStateOverride || await loadSharedStateFromBackend();
+  const sharedState = sharedStateOverride || await loadSharedState();
   const sharedUpdates = sharedState.updates;
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
@@ -2055,8 +2105,7 @@ async function loadCustomUpdates(sharedStateOverride = null) {
 }
 
 async function refreshSharedStateFromBackend() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-  const sharedState = await loadSharedStateFromBackend();
+  const sharedState = await loadSharedState();
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
     applyLiveStatusVisibility();
