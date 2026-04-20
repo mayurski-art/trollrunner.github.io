@@ -1,0 +1,25 @@
+{
+  "live_status_enabled": true,
+  "updates": [
+    {
+      "title": "April 18, 2026",
+      "body": "All sticker images fully uploaded ;) including today's. One away from 100... A thousand more miles before I ever think about giving up on my community. I remain frustrated with trying to get the syncing. Now I have to copy pasta this same update message for mobile devices...",
+      "createdAt": "2026-04-18T21:00:00.000Z"
+    },
+    {
+      "title": "April 16, 2026",
+      "body": "- Added \"Live: Currently trolling around\" sign spotted below the subdomain buttons \"Blog, Nutrition, Finance\".\n- Noticed $TROLL balance and USD value doesn't show up sometimes despite waiting a minute after refreshing... monitoring the trollituation (ok i tried to combine troll with situation.... bad joke).\n- Looked into improving UI for finance.trollrunner.net. Added copy fund wallet address button.\n- Shared backend sync for \"Latest Update\" needs further investigating.",
+      "createdAt": "2026-04-16T21:00:00.000Z"
+    },
+    {
+      "title": "April 13, 2026",
+      "body": "Starting to look into the issue of \"Latest Updates\" not syncing from laptop to mobile devices. :( I want y'all to get the latest updates duhhh.",
+      "createdAt": "2026-04-13T21:00:00.000Z"
+    },
+    {
+      "title": "April 12, 2026",
+      "body": "Took two days off working on the site, came back for some late night web-building for a couple hours... *yawnnnnnnnnnn*...\n- Built finance.trollrunner.net, tried to add section where transfer autopopulate but had some trouble.\n- I did however fix the issue of having updated price action (amount of $TROLL correlating to current USD prices, quite the hurdle).\n- Started building blog.trollrunner.net. Lots planned for this. If you read this throw some tokens into the funding wallet ;) Trololololololo",
+      "createdAt": "2026-04-12T21:00:00.000Z"
+    }
+  ]
+}
