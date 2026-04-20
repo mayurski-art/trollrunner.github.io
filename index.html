@@ -700,6 +700,7 @@ header p {
   font-size: 13px;
   line-height: 1.6;
   color: #4a4a4a;                  /* readable gray for description */
+  white-space: pre-line;
 }
 
 .feedback-field {
@@ -1174,6 +1175,7 @@ const SUPABASE_TABLE_FALLBACKS = ['site_updates', 'updates', 'shared_state', 'ap
 const SUPABASE_TABLE_CACHE_KEY = 'trollrunner_supabase_table';
 const SUPABASE_ROW_ID = 'main';
 const SUPABASE_SHARED_STATE_REFRESH_MS = 10000;
+const SHARED_UPDATES_JSON_URL = 'assets/data/latest-updates.json';
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DEFAULT_UPDATES = [
   {
@@ -1935,6 +1937,14 @@ function parseSharedLiveStatusPayload(payload) {
   return null;
 }
 
+function parseJsonSharedStatePayload(payload) {
+  if (!payload || typeof payload !== 'object') return { updates: [], liveStatusEnabled: null };
+  return {
+    updates: parseSharedUpdatesPayload(payload),
+    liveStatusEnabled: null,
+  };
+}
+
 function getSupabaseTableCandidates() {
   const cached = localStorage.getItem(SUPABASE_TABLE_CACHE_KEY);
   const seeded = [cached, SUPABASE_TABLE, ...SUPABASE_TABLE_FALLBACKS].filter(Boolean);
@@ -2010,6 +2020,35 @@ async function loadSharedStateFromBackend() {
   }
 }
 
+async function loadSharedStateFromJsonEndpoint() {
+  if (!SHARED_UPDATES_JSON_URL) return { updates: [], liveStatusEnabled: null };
+  try {
+    const response = await fetch(`${SHARED_UPDATES_JSON_URL}?v=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return { updates: [], liveStatusEnabled: null };
+    const payload = await response.json();
+    return parseJsonSharedStatePayload(payload);
+  } catch {
+    return { updates: [], liveStatusEnabled: null };
+  }
+}
+
+async function loadSharedState() {
+  const [supabaseState, jsonState] = await Promise.all([
+    loadSharedStateFromBackend(),
+    loadSharedStateFromJsonEndpoint(),
+  ]);
+  return {
+    updates: [
+      ...(Array.isArray(supabaseState.updates) ? supabaseState.updates : []),
+      ...(Array.isArray(jsonState.updates) ? jsonState.updates : []),
+    ],
+    liveStatusEnabled:
+      typeof supabaseState.liveStatusEnabled === 'boolean'
+        ? supabaseState.liveStatusEnabled
+        : jsonState.liveStatusEnabled,
+  };
+}
+
 async function loadCustomUpdates(sharedStateOverride = null) {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;
@@ -2019,7 +2058,7 @@ async function loadCustomUpdates(sharedStateOverride = null) {
   } catch {
     customUpdates = [];
   }
-  const sharedState = sharedStateOverride || await loadSharedStateFromBackend();
+  const sharedState = sharedStateOverride || await loadSharedState();
   const sharedUpdates = sharedState.updates;
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
@@ -2055,8 +2094,7 @@ async function loadCustomUpdates(sharedStateOverride = null) {
 }
 
 async function refreshSharedStateFromBackend() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-  const sharedState = await loadSharedStateFromBackend();
+  const sharedState = await loadSharedState();
   if (sharedState.liveStatusEnabled !== null) {
     localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
     applyLiveStatusVisibility();
