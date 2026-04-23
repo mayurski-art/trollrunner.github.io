@@ -1,1 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trollrunner Projects | U MAD BRO?</title>
+  <style>
+    :root {
+      --bg: #0a0a14;
+      --panel: #131327;
+      --panel-soft: #1a1a33;
+      --line: rgba(175, 121, 255, 0.35);
+      --text: #f0e8ff;
+      --muted: #b8a8d9;
+      --accent: #af79ff;
+      --accent-2: #4deeea;
+      --danger: #ff6b8d;
+    }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(175,121,255,0.20), transparent 35%),
+        radial-gradient(circle at 85% 0%, rgba(77,238,234,0.12), transparent 40%),
+        linear-gradient(180deg, #080811 0%, #06060d 100%);
+    }
+
+    .noise::before {
+      content: "";
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(255,255,255,0.016) 0px,
+        rgba(255,255,255,0.016) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, rgba(175,121,255,0.12), rgba(175,121,255,0.04));
+    }
+
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      text-decoration: none;
+      color: var(--text);
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .chip:hover { background: rgba(175,121,255,0.16); }
+
+    .hero {
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      background: linear-gradient(180deg, rgba(19,19,39,0.9), rgba(9,9,20,0.95));
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .stats {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: var(--panel);
+    }
+
+    .label {
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .value {
+      margin-top: 8px;
+      color: var(--accent-2);
+      font-size: 24px;
+      text-shadow: 0 0 10px rgba(77,238,234,0.4);
+    }
+
+    .layout {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 14px;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 16px;
+    }
+
+    .card p {
+      margin: 8px 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .route-preview {
+      margin-top: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      background: #0d0d1d;
+      padding: 12px;
+      overflow-x: auto;
+      font-size: 12px;
+      color: #d5cbef;
+      white-space: pre;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .step {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #101024;
+    }
+
+    .step strong {
+      color: var(--accent-2);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .funding {
+      margin-top: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,107,141,0.45);
+      background: linear-gradient(180deg, rgba(255,107,141,0.12), rgba(255,107,141,0.06));
+      padding: 14px;
+    }
+
+    .funding .cta {
+      margin-top: 10px;
+      display: inline-block;
+      text-decoration: none;
+      color: #2a1320;
+      background: #ff8cab;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .funding .cta:hover { filter: brightness(1.06); }
+
+    footer {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      h1 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body class="noise">
+  <main class="container">
+    <header class="topbar">
+      <div class="brand">🗺️ Trollrunner Projects</div>
+      <nav class="nav" aria-label="Site links">
+        <a class="chip" href="https://trollrunner.net">Main Site</a>
+        <a class="chip" href="https://blog.trollrunner.net">Blog</a>
+        <a class="chip" href="https://finance.trollrunner.net">Finance</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>U MAD BRO? <span aria-hidden="true">😏</span></h1>
+      <p class="subtitle">Project 001: A meme-art Strava route where the GPS path spells “U MAD BRO?” across the city grid.</p>
+
+      <div class="stats" aria-label="Route stats dashboard">
+        <article class="stat">
+          <div class="label">Distance</div>
+          <div class="value">9.7 mi</div>
+        </article>
+        <article class="stat">
+          <div class="label">Elevation</div>
+          <div class="value">420 ft</div>
+        </article>
+        <article class="stat">
+          <div class="label">Letters</div>
+          <div class="value">9 + ?</div>
+        </article>
+        <article class="stat">
+          <div class="label">Status</div>
+          <div class="value">Drafting</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="layout">
+      <article class="card">
+        <h2>Route Concept Console</h2>
+        <p>
+          This route is a wearable piece of street typography. The run starts with a giant “U”, bends through neighborhood blocks to carve “MAD”, and closes with “BRO?” plus a dramatic question mark tail.
+        </p>
+        <p>
+          Style direction: inspired by the trollface meme spirit (playful, chaotic, self-aware), but designed with clean plotting logic so each character is readable on Strava map replay.
+        </p>
+
+        <div class="route-preview" aria-label="ASCII route plan">
+[U] ────── turn-by-turn arcs
+[MAD] ─── orthogonal block lettering
+[BRO?] ─ rounded corners + punctuation sweep
+
+ETA split:
+  U      2.1 mi
+  MAD    3.4 mi
+  BRO?   4.2 mi
+        </div>
+      </article>
+
+      <aside class="card">
+        <h2>Build Timeline</h2>
+        <div class="timeline">
+          <div class="step"><strong>Phase 1</strong><br/>Scout roads and legal pedestrian paths for each glyph.</div>
+          <div class="step"><strong>Phase 2</strong><br/>Plot GPX geometry and validate readability on map zoom levels.</div>
+          <div class="step"><strong>Phase 3</strong><br/>Run the full route, publish Strava activity, and share dashboard recap.</div>
+        </div>
+
+        <section class="funding" aria-label="Funding description">
+          <h2 style="margin:0; font-size:15px; text-transform:uppercase; letter-spacing:0.04em;">Fund this Project</h2>
+          <p>
+            Funding supports route scouting, hydration, safety gear, and sticker drops for supporters. Full treasury details and contribution flow are hosted on the finance portal.
+          </p>
+          <a class="cta" href="https://finance.trollrunner.net" target="_blank" rel="noopener noreferrer">Go to Finance Dashboard →</a>
+        </section>
+      </aside>
+    </section>
+
+    <footer>
+      Trollrunner Projects · Art Routes for the internet generation.
+    </footer>
+  </main>
+</body>
+</html>
