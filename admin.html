@@ -515,7 +515,7 @@
       const synced = await syncUpdatesToBackend(nextUpdates);
       alert(synced
         ? 'Update saved and shared across devices.'
-        : 'Update saved on this device, but shared sync failed. Check Supabase table policy/availability.');
+        : `Update saved on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
     }
 
     async function editUpdate(id) {
@@ -539,7 +539,7 @@
       renderUpdates();
       const synced = await syncUpdatesToBackend(updates);
       if (!synced) {
-        alert('Edit saved on this device, but shared sync failed. Check Supabase table policy/availability.');
+        alert(`Edit saved on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
       }
     }
 
@@ -553,7 +553,7 @@
       renderUpdates();
       const synced = await syncUpdatesToBackend(nextUpdates);
       if (!synced) {
-        alert('Archive state changed on this device, but shared sync failed. Check Supabase table policy/availability.');
+        alert(`Archive state changed on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
       }
     }
 
@@ -564,7 +564,7 @@
       renderUpdates();
       const synced = await syncUpdatesToBackend(base);
       if (!synced) {
-        alert('Cleared on this device, but shared sync failed. Check Supabase table policy/availability.');
+        alert(`Cleared on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
       }
     }
 
@@ -617,13 +617,18 @@
       return response && response.status === 404;
     }
 
+    function getSyncStatusText() {
+      const node = document.getElementById('sync-state');
+      return node ? node.textContent.trim() : '';
+    }
+
     async function setLiveStatus(enabled) {
       localStorage.setItem(LIVE_STATUS_KEY, enabled ? '1' : '0');
       localStorage.setItem(LIVE_STATUS_OVERRIDE_KEY, '1');
       renderLiveStatusState();
       const synced = await pushLiveStatusToBackend(enabled);
       if (!synced) {
-        alert('Live popup changed on this device, but shared sync failed. Check Supabase table policy/availability.');
+        alert(`Live popup changed on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
       }
     }
 
