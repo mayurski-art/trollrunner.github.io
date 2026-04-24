@@ -48,6 +48,7 @@
       font-weight: 600;
     }
     button.secondary { background: #2b2d36; }
+    button.danger { background: #b3261e; }
     .preview .item {
       background: #12141a;
       border: 1px solid rgba(255,255,255,0.1);
@@ -440,6 +441,7 @@
           <div class="row">
             <button class="secondary" onclick="editUpdate('${escapeHtml(u.id)}')">Edit</button>
             <button class="secondary" onclick="toggleArchiveUpdate('${escapeHtml(u.id)}')">${u.archived ? 'Unarchive' : 'Archive'}</button>
+            <button class="danger" onclick="deleteUpdate('${escapeHtml(u.id)}')">Delete</button>
           </div>
         </div>`;
       }).join('');
@@ -535,6 +537,22 @@
       const synced = await syncUpdatesToBackend(nextUpdates);
       if (!synced) {
         alert(`Archive state changed on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
+      }
+    }
+
+    async function deleteUpdate(id) {
+      const updates = ensureSeededUpdates();
+      const idx = updates.findIndex(item => String(item.id) === String(id));
+      if (idx < 0) return;
+      const current = normalizeUpdate(updates[idx], updates[idx]?.source || 'custom');
+      if (!current) return;
+      if (!confirm(`Delete "${current.title}" permanently?`)) return;
+      const nextUpdates = updates.filter(item => String(item.id) !== String(id));
+      setUpdates(nextUpdates, { skipPush: true });
+      renderUpdates();
+      const synced = await syncUpdatesToBackend(nextUpdates);
+      if (!synced) {
+        alert(`Delete saved on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
       }
     }
 
