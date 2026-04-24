@@ -58,9 +58,9 @@ html, body {
 
 /* ── HEADER ── */
 header {
-  padding: 28px 20px 18px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  border-bottom: 0.5px solid rgba(255,255,255,0.1);
+ padding: 28px 20px 18px;
+  background: linear-gradient(178deg, #14143a 0%, #21439f 50%, #000000 100%);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 .header-row {
   display: grid;
@@ -1176,6 +1176,7 @@ const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 4;
 const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
+const SUPABASE_ANON_KEY_PLACEHOLDER = 'your_anon_public_key';
 const SUPABASE_TABLE = 'site_updates';
 const SUPABASE_TABLE_FALLBACKS = ['site_updates', 'updates', 'shared_state', 'app_state'];
 const SUPABASE_TABLE_CACHE_KEY = 'trollrunner_supabase_table';
@@ -1298,6 +1299,12 @@ DATA.forEach(d => {
 });
 const allDropDates = Object.keys(DATE_COUNTS).sort();
 let calendarMonth = allDropDates.length ? new Date(`${allDropDates[allDropDates.length-1]}T00:00:00`) : new Date();
+
+function isSupabaseConfigured() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  if (SUPABASE_ANON_KEY === SUPABASE_ANON_KEY_PLACEHOLDER) return false;
+  return true;
+}
 
 function applyLiveStatusVisibility() {
   const livePill = document.getElementById('live-status-pill');
@@ -2024,7 +2031,7 @@ async function fetchSharedStateWithTableFallback(queryString) {
 }
 
 async function loadSharedStateFromBackend() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return { updates: [], liveStatusEnabled: null };
+  if (!isSupabaseConfigured()) return { updates: [], liveStatusEnabled: null };
   try {
     const qs = new URLSearchParams({
       select: 'updates,live_status_enabled',
@@ -2208,7 +2215,7 @@ document.getElementById('admin-pass').addEventListener('keydown', e => {
 });
 
 initMap(); buildTabs(); renderPins(); renderList(); initPanelResizer(); initListResizer(); syncSidebarWidthForViewport(); loadCustomUpdates(); removeDuplicateFoundStickerSections();
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+if (isSupabaseConfigured()) {
   window.setInterval(refreshSharedStateFromBackend, SUPABASE_SHARED_STATE_REFRESH_MS);
 }
 </script>
