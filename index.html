@@ -2086,12 +2086,6 @@ async function loadSharedState() {
 async function loadCustomUpdates(sharedStateOverride = null) {
   const wrap = document.getElementById('latest-updates');
   if (!wrap) return;
-  let customUpdates = [];
-  try {
-    customUpdates = JSON.parse(loadStoredUpdates() || '[]');
-  } catch {
-    customUpdates = [];
-  }
   const sharedState = sharedStateOverride || await loadSharedState();
   const sharedUpdates = sharedState.updates;
   if (sharedState.liveStatusEnabled !== null && !hasManualLiveStatusOverride()) {
@@ -2101,7 +2095,6 @@ async function loadCustomUpdates(sharedStateOverride = null) {
   const source = [
     ...DEFAULT_UPDATES,
     ...(Array.isArray(sharedUpdates) ? sharedUpdates : []),
-    ...(Array.isArray(customUpdates) ? customUpdates : []),
   ];
   const deduped = [];
   const seen = new Set();
