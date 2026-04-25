@@ -348,13 +348,31 @@ header p {
 }
 .bio-animation-card .animation-credit {
   position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  bottom: 8px;
+  height: 24px;
   z-index: 6;
-  text-align: center;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.bio-animation-card .animation-credit-track {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  animation: credit-marquee-scroll 18s linear infinite;
+}
+.bio-animation-card .animation-credit-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 48px;
+  white-space: nowrap;
   font-size: 11px;
-  line-height: 1.25;
+  line-height: 1;
   color: rgba(255,255,255,0.8);
 }
 .bio-animation-card .animation-credit a {
@@ -364,6 +382,10 @@ header p {
 .bio-animation-card .animation-credit a:hover {
   color: #87c2ff;
   text-decoration: underline;
+}
+@keyframes credit-marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 .left-puppet-card .animation-frame {
   background:
@@ -503,6 +525,17 @@ header p {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .bio-animation-card .animation-credit {
+    justify-content: center;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .bio-animation-card .animation-credit-track {
+    animation: none;
+  }
+  .bio-animation-card .animation-credit-copy + .animation-credit-copy {
+    display: none;
+  }
   .left-puppet-card .animation-poster {
     opacity: 1;
     animation: none;
@@ -1316,7 +1349,12 @@ footer a:hover { color: #fff; }
           <div class="puppet-piece puppet-body"></div>
         </div>
         <img class="animation-poster" data-animation-poster src="assets/animations/green-suit-charge.jpg" alt="Trollface suited figure charging green inside a circular frame">
-        <div class="animation-credit">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></div>
+        <div class="animation-credit" aria-label="Artwork credits">
+          <div class="animation-credit-track">
+            <span class="animation-credit-copy">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></span>
+            <span class="animation-credit-copy" aria-hidden="true">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer" tabindex="-1">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer" tabindex="-1">@troll_runner</a></span>
+          </div>
+        </div>
       </div>
     </article>
 
@@ -1329,7 +1367,12 @@ footer a:hover { color: #fff; }
     <article class="animation-card bio-animation-card right" data-animation-card style="--animation-poster: url('assets/animations/start-line-sparks.jpg');" hidden>
       <div class="animation-frame">
         <img class="animation-poster" data-animation-poster src="assets/animations/start-line-sparks.jpg" alt="Athlete trollface crouched at the starting line with glowing sparks on the track">
-        <div class="animation-credit">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></div>
+        <div class="animation-credit" aria-label="Artwork credits">
+          <div class="animation-credit-track">
+            <span class="animation-credit-copy">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></span>
+            <span class="animation-credit-copy" aria-hidden="true">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer" tabindex="-1">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer" tabindex="-1">@troll_runner</a></span>
+          </div>
+        </div>
       </div>
     </article>
   </div>
