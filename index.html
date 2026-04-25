@@ -307,25 +307,6 @@ header p {
 .animation-card[hidden] {
   display: none;
 }
-.animation-card-label {
-  position: absolute;
-  left: 22px;
-  top: 22px;
-  z-index: 6;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 11px;
-  border-radius: 999px;
-  border: 0.5px solid rgba(255,255,255,0.16);
-  background: rgba(7,10,14,0.55);
-  backdrop-filter: blur(10px);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.76);
-}
 .animation-frame {
   position: relative;
   isolation: isolate;
@@ -360,10 +341,29 @@ header p {
   border-radius: 18px;
 }
 .bio-animation-card .animation-poster {
-  inset: 10px;
+  inset: 10px 10px 46px;
   width: calc(100% - 20px);
-  height: calc(100% - 20px);
+  height: calc(100% - 56px);
   border-radius: 18px;
+}
+.bio-animation-card .animation-credit {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 12px;
+  z-index: 6;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.25;
+  color: rgba(255,255,255,0.8);
+}
+.bio-animation-card .animation-credit a {
+  color: #4da3ff;
+  text-decoration: none;
+}
+.bio-animation-card .animation-credit a:hover {
+  color: #87c2ff;
+  text-decoration: underline;
 }
 .left-puppet-card .animation-frame {
   background:
@@ -373,18 +373,18 @@ header p {
 .left-puppet-card .animation-poster {
   z-index: 4;
   opacity: 0;
-  animation: puppet-final-reveal 8.8s ease-in-out infinite;
+  animation: puppet-final-reveal 7.2s ease-in-out infinite;
 }
 .puppet-stage {
   position: absolute;
-  inset: 10px;
+  inset: 10px 10px 46px;
   border-radius: 18px;
   overflow: hidden;
   pointer-events: none;
   z-index: 3;
   animation:
-    puppet-stage-settle 8.8s ease-in-out infinite,
-    puppet-stage-fade 8.8s ease-in-out infinite;
+    puppet-stage-settle 7.2s ease-in-out infinite,
+    puppet-stage-fade 7.2s ease-in-out infinite;
 }
 .puppet-backplate,
 .puppet-piece {
@@ -399,7 +399,7 @@ header p {
   opacity: 0.16;
   filter: blur(7px) saturate(0.8) brightness(0.94);
   transform: scale(1.03);
-  animation: puppet-backplate-fade 8.8s ease-in-out infinite;
+  animation: puppet-backplate-fade 7.2s ease-in-out infinite;
 }
 .puppet-piece {
   will-change: transform, opacity;
@@ -408,43 +408,43 @@ header p {
 .puppet-body {
   z-index: 3;
   clip-path: polygon(39% 11%, 61% 11%, 61.5% 20%, 59% 38%, 60.5% 95%, 39.5% 95%, 41% 38%, 38.5% 20%);
-  animation: puppet-body-settle 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-body-settle 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 .puppet-arm-lower-left {
   z-index: 2;
   clip-path: polygon(3% 32%, 45% 31%, 45% 47%, 3% 48%);
   transform-origin: 46% 39%;
-  animation: puppet-arm-lower-left 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-arm-lower-left 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 .puppet-arm-lower-right {
   z-index: 2;
   clip-path: polygon(55% 31%, 97% 32%, 97% 48%, 55% 47%);
   transform-origin: 54% 39%;
-  animation: puppet-arm-lower-right 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-arm-lower-right 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 .puppet-arm-upper-left {
   z-index: 1;
   clip-path: polygon(4% 18%, 49% 17%, 49% 37%, 4% 34%);
   transform-origin: 49% 33%;
-  animation: puppet-arm-upper-left 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-arm-upper-left 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 .puppet-arm-upper-right {
   z-index: 1;
   clip-path: polygon(51% 17%, 96% 18%, 96% 34%, 51% 37%);
   transform-origin: 51% 33%;
-  animation: puppet-arm-upper-right 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-arm-upper-right 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 .puppet-leg-left {
   z-index: 1;
   clip-path: polygon(14% 52%, 46% 51%, 35% 95%, 11% 95%);
   transform-origin: 47% 58%;
-  animation: puppet-leg-left 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-leg-left 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 .puppet-leg-right {
   z-index: 1;
   clip-path: polygon(54% 51%, 86% 52%, 89% 95%, 65% 95%);
   transform-origin: 53% 58%;
-  animation: puppet-leg-right 8.8s cubic-bezier(0.55, 0, 0.22, 1) infinite;
+  animation: puppet-leg-right 7.2s cubic-bezier(0.55, 0, 0.22, 1) infinite;
 }
 
 @keyframes puppet-stage-settle {
@@ -1305,7 +1305,6 @@ footer a:hover { color: #fff; }
   <div class="bio-layout" id="bio-layout">
     <article class="animation-card bio-animation-card left left-puppet-card" data-animation-card style="--animation-poster: url('assets/animations/green-suit-charge.jpg');" hidden>
       <div class="animation-frame">
-        <span class="animation-card-label">Green Charge</span>
         <div class="puppet-stage" aria-hidden="true">
           <div class="puppet-backplate"></div>
           <div class="puppet-piece puppet-arm-upper-left"></div>
@@ -1317,6 +1316,7 @@ footer a:hover { color: #fff; }
           <div class="puppet-piece puppet-body"></div>
         </div>
         <img class="animation-poster" data-animation-poster src="assets/animations/green-suit-charge.jpg" alt="Trollface suited figure charging green inside a circular frame">
+        <div class="animation-credit">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></div>
       </div>
     </article>
 
@@ -1328,8 +1328,8 @@ footer a:hover { color: #fff; }
 
     <article class="animation-card bio-animation-card right" data-animation-card style="--animation-poster: url('assets/animations/start-line-sparks.jpg');" hidden>
       <div class="animation-frame">
-        <span class="animation-card-label">Start Line</span>
         <img class="animation-poster" data-animation-poster src="assets/animations/start-line-sparks.jpg" alt="Athlete trollface crouched at the starting line with glowing sparks on the track">
+        <div class="animation-credit">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a>. Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></div>
       </div>
     </article>
   </div>
