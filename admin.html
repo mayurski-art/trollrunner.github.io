@@ -48,6 +48,8 @@
       font-weight: 600;
     }
     button.secondary { background: #2b2d36; }
+    button.success { background: #1f9d55; }
+    button.alert { background: #c4342b; }
     button.danger { background: #b3261e; }
     .preview .item {
       background: #12141a;
@@ -85,13 +87,18 @@
     </div>
 
     <div class="card preview">
-      <h3>Live status popup control</h3>
-      <p>Toggle the homepage live popup shown below the Blog / Nutrition / Finance buttons.</p>
-      <p id="live-status-state">Live popup is currently off.</p>
+      <h3>Live status popup controls</h3>
+      <p>Toggle the homepage live popups shown below the Blog / Nutrition / Finance / Projects buttons.</p>
+      <p id="live-status-running-state">Running/trolling live popup is currently off.</p>
       <p id="sync-state">Shared sync status will appear here.</p>
       <div class="row">
-        <button onclick="setLiveStatus(true)">Turn live popup on</button>
-        <button class="secondary" onclick="setLiveStatus(false)">Turn live popup off</button>
+        <button class="alert" onclick="setLiveStatus('running', true)">Turn running/trolling on</button>
+        <button class="secondary" onclick="setLiveStatus('running', false)">Turn running/trolling off</button>
+      </div>
+      <p id="live-status-coding-state">Coding/trolling live popup is currently off.</p>
+      <div class="row">
+        <button class="success" onclick="setLiveStatus('coding', true)">Turn coding/trolling on</button>
+        <button class="secondary" onclick="setLiveStatus('coding', false)">Turn coding/trolling off</button>
       </div>
     </div>
 
@@ -108,8 +115,13 @@
     const AUTH_KEY = 'trollrunner_admin_auth';
     const UPDATES_KEY = 'trollrunner_updates';
     const FEEDBACK_KEY = 'trollrunner_feedback';
-    const LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
-    const LIVE_STATUS_OVERRIDE_KEY = 'trollrunner_live_status_override';
+    const SHARED_STATUS_META_ID = '__trollrunner_live_status_meta__';
+    const LIVE_RUNNING_STATUS_KEY = 'trollrunner_live_status_running_enabled';
+    const LIVE_RUNNING_STATUS_OVERRIDE_KEY = 'trollrunner_live_status_running_override';
+    const LIVE_CODING_STATUS_KEY = 'trollrunner_live_status_coding_enabled';
+    const LIVE_CODING_STATUS_OVERRIDE_KEY = 'trollrunner_live_status_coding_override';
+    const LEGACY_LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
+    const LEGACY_LIVE_STATUS_OVERRIDE_KEY = 'trollrunner_live_status_override';
     const MAX_VISIBLE_UPDATES = 4;
     const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
@@ -190,19 +202,88 @@
       if (!options.skipPush) void pushUpdatesToBackend(items);
     }
 
-    function parseUpdatesPayload(payload) {
+    function readStoredLiveStatus(key, legacyKey = '') {
+      const raw = localStorage.getItem(key);
+      if (raw === '1' || raw === '0') return raw === '1';
+      if (legacyKey) {
+        const legacyRaw = localStorage.getItem(legacyKey);
+        if (legacyRaw === '1' || legacyRaw === '0') return legacyRaw === '1';
+      }
+      return false;
+    }
+
+    function writeStoredLiveStatus(key, enabled, legacyKey = '') {
+      localStorage.setItem(key, enabled ? '1' : '0');
+      if (legacyKey) localStorage.setItem(legacyKey, enabled ? '1' : '0');
+    }
+
+    function getSharedUpdatesArray(payload) {
       if (Array.isArray(payload)) return payload;
       if (payload && Array.isArray(payload.updates)) return payload.updates;
       return [];
     }
 
-    function parseLiveStatusPayload(payload) {
-      if (!payload || typeof payload !== 'object') return null;
-      if (typeof payload.live_status_enabled === 'boolean') return payload.live_status_enabled;
-      if (payload.live_status_enabled === '1' || payload.live_status_enabled === '0') {
-        return payload.live_status_enabled === '1';
-      }
+    function isSharedStatusMetaItem(item) {
+      return Boolean(item) && typeof item === 'object' && item.id === SHARED_STATUS_META_ID;
+    }
+
+    function parseUpdatesPayload(payload) {
+      return getSharedUpdatesArray(payload).filter(item => !isSharedStatusMetaItem(item));
+    }
+
+    function parseStatusFlag(value) {
+      if (typeof value === 'boolean') return value;
+      if (value === '1' || value === '0') return value === '1';
       return null;
+    }
+
+    function parseLiveStatusesPayload(payload) {
+      const rawUpdates = getSharedUpdatesArray(payload);
+      const meta = rawUpdates.find(isSharedStatusMetaItem);
+      const statuses = {
+        running: meta && meta.liveStatuses ? parseStatusFlag(meta.liveStatuses.running) : null,
+        coding: meta && meta.liveStatuses ? parseStatusFlag(meta.liveStatuses.coding) : null,
+      };
+
+      if (payload && typeof payload === 'object') {
+        if (statuses.running === null) {
+          statuses.running = parseStatusFlag(payload.live_status_running_enabled);
+        }
+        if (statuses.coding === null) {
+          statuses.coding = parseStatusFlag(payload.live_status_coding_enabled);
+        }
+        if (statuses.running === null) {
+          statuses.running = parseStatusFlag(payload.live_status_enabled);
+        }
+      }
+
+      return statuses;
+    }
+
+    function getCurrentLiveStatuses() {
+      return {
+        running: readStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, LEGACY_LIVE_STATUS_KEY),
+        coding: readStoredLiveStatus(LIVE_CODING_STATUS_KEY),
+      };
+    }
+
+    function buildSharedUpdatesPayload(items, liveStatuses = getCurrentLiveStatuses()) {
+      const visibleItems = Array.isArray(items) ? items.filter(item => !isSharedStatusMetaItem(item)) : [];
+      return [
+        ...visibleItems,
+        {
+          id: SHARED_STATUS_META_ID,
+          title: '__live_status_meta__',
+          body: '__live_status_meta__',
+          createdAt: new Date().toISOString(),
+          archived: true,
+          source: 'system',
+          liveStatuses: {
+            running: Boolean(liveStatuses.running),
+            coding: Boolean(liveStatuses.coding),
+          },
+        },
+      ];
     }
 
     function isSupabaseConfigured() {
@@ -254,11 +335,14 @@
         const json = await response.json();
         const payload = Array.isArray(json) ? json[0] : json;
         const updates = parseUpdatesPayload(payload);
-        const liveStatusEnabled = parseLiveStatusPayload(payload);
-        if (liveStatusEnabled !== null) {
-          localStorage.setItem(LIVE_STATUS_KEY, liveStatusEnabled ? '1' : '0');
-          renderLiveStatusState();
+        const liveStatuses = parseLiveStatusesPayload(payload);
+        if (typeof liveStatuses.running === 'boolean') {
+          writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, liveStatuses.running, LEGACY_LIVE_STATUS_KEY);
         }
+        if (typeof liveStatuses.coding === 'boolean') {
+          writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, liveStatuses.coding);
+        }
+        renderLiveStatusState();
         status.textContent = `Shared updates loaded (${updates.length} items).`;
         return updates;
       } catch (err) {
@@ -270,10 +354,11 @@
     async function pushUpdatesToBackend(items) {
       if (!isSupabaseConfigured()) return false;
       const status = document.getElementById('sync-state');
+      const liveStatuses = getCurrentLiveStatuses();
       const payload = {
         id: SUPABASE_ROW_ID,
-        updates: items,
-        live_status_enabled: localStorage.getItem(LIVE_STATUS_KEY) === '1',
+        updates: buildSharedUpdatesPayload(items, liveStatuses),
+        live_status_enabled: liveStatuses.running,
         updated_at: new Date().toISOString(),
       };
       try {
@@ -294,12 +379,13 @@
       return false;
     }
 
-    async function pushLiveStatusToBackend(enabled) {
+    async function pushLiveStatusesToBackend(liveStatuses) {
       if (!isSupabaseConfigured()) return false;
       const status = document.getElementById('sync-state');
       const payload = {
         id: SUPABASE_ROW_ID,
-        live_status_enabled: Boolean(enabled),
+        updates: buildSharedUpdatesPayload(ensureSeededUpdates(), liveStatuses),
+        live_status_enabled: Boolean(liveStatuses.running),
         updated_at: new Date().toISOString(),
       };
       try {
@@ -312,7 +398,14 @@
           body: JSON.stringify([payload]),
         });
         if (response.ok) {
-          if (status) status.textContent = `Shared live status synced (${enabled ? 'on' : 'off'}).`;
+          if (status) {
+            const active = [];
+            if (liveStatuses.running) active.push('running/trolling');
+            if (liveStatuses.coding) active.push('coding/trolling');
+            status.textContent = active.length
+              ? `Shared live statuses synced (${active.join(' + ')} on).`
+              : 'Shared live statuses synced (all off).';
+          }
           return true;
         }
       } catch {}
@@ -340,11 +433,14 @@
           const json = await response.json();
           const payload = Array.isArray(json) ? json[0] : json;
           const updates = parseUpdatesPayload(payload);
-          const liveStatusEnabled = parseLiveStatusPayload(payload);
-          if (liveStatusEnabled !== null) {
-            localStorage.setItem(LIVE_STATUS_KEY, liveStatusEnabled ? '1' : '0');
-            renderLiveStatusState();
+          const liveStatuses = parseLiveStatusesPayload(payload);
+          if (typeof liveStatuses.running === 'boolean') {
+            writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, liveStatuses.running, LEGACY_LIVE_STATUS_KEY);
           }
+          if (typeof liveStatuses.coding === 'boolean') {
+            writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, liveStatuses.coding);
+          }
+          renderLiveStatusState();
           if (status) status.textContent = `Shared updates loaded (${updates.length} items).`;
           return updates;
         }
@@ -361,10 +457,11 @@
     async function syncUpdatesToBackend(items) {
       if (!isSupabaseConfigured()) return false;
       const status = document.getElementById('sync-state');
+      const liveStatuses = getCurrentLiveStatuses();
       const payload = {
         id: SUPABASE_ROW_ID,
-        updates: items,
-        live_status_enabled: localStorage.getItem(LIVE_STATUS_KEY) === '1',
+        updates: buildSharedUpdatesPayload(items, liveStatuses),
+        live_status_enabled: liveStatuses.running,
         updated_at: new Date().toISOString(),
       };
       let lastError = '';
@@ -595,10 +692,20 @@
     }
 
     function renderLiveStatusState() {
-      const state = document.getElementById('live-status-state');
-      if (!state) return;
-      const enabled = localStorage.getItem(LIVE_STATUS_KEY) === '1';
-      state.textContent = enabled ? 'Live popup is currently on.' : 'Live popup is currently off.';
+      const runningState = document.getElementById('live-status-running-state');
+      const codingState = document.getElementById('live-status-coding-state');
+      const runningEnabled = readStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, LEGACY_LIVE_STATUS_KEY);
+      const codingEnabled = readStoredLiveStatus(LIVE_CODING_STATUS_KEY);
+      if (runningState) {
+        runningState.textContent = runningEnabled
+          ? 'Running/trolling live popup is currently on.'
+          : 'Running/trolling live popup is currently off.';
+      }
+      if (codingState) {
+        codingState.textContent = codingEnabled
+          ? 'Coding/trolling live popup is currently on.'
+          : 'Coding/trolling live popup is currently off.';
+      }
     }
 
     function getSyncStatusText() {
@@ -606,11 +713,19 @@
       return node ? node.textContent.trim() : '';
     }
 
-    async function setLiveStatus(enabled) {
-      localStorage.setItem(LIVE_STATUS_KEY, enabled ? '1' : '0');
-      localStorage.setItem(LIVE_STATUS_OVERRIDE_KEY, '1');
+    async function setLiveStatus(type, enabled) {
+      if (type === 'running') {
+        writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, enabled, LEGACY_LIVE_STATUS_KEY);
+        localStorage.setItem(LIVE_RUNNING_STATUS_OVERRIDE_KEY, '1');
+        localStorage.setItem(LEGACY_LIVE_STATUS_OVERRIDE_KEY, '1');
+      } else if (type === 'coding') {
+        writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, enabled);
+        localStorage.setItem(LIVE_CODING_STATUS_OVERRIDE_KEY, '1');
+      } else {
+        return;
+      }
       renderLiveStatusState();
-      const synced = await pushLiveStatusToBackend(enabled);
+      const synced = await pushLiveStatusesToBackend(getCurrentLiveStatuses());
       if (!synced) {
         alert(`Live popup changed on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
       }

@@ -102,6 +102,12 @@ header h1 {
   align-items: center;
   gap: 10px;
 }
+.header-live-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
 .header-links-row {
   display: flex;
   align-items: center;
@@ -120,6 +126,17 @@ header h1 {
   color: rgba(255,255,255,0.94);
   letter-spacing: 0.15px;
 }
+.header-live-pill--running {
+  background: rgba(255, 59, 48, 0.3);
+  --live-dot-color: #ff453a;
+  --live-dot-pulse: rgba(255, 69, 58, 0.85);
+}
+.header-live-pill--coding {
+  background: rgba(48, 209, 88, 0.24);
+  border-color: rgba(72, 255, 138, 0.28);
+  --live-dot-color: #30d158;
+  --live-dot-pulse: rgba(48, 209, 88, 0.85);
+}
 .header-live-pill.is-visible {
   display: inline-flex;
 }
@@ -127,12 +144,20 @@ header h1 {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff453a;
-  box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.85);
+  background: var(--live-dot-color, #ff453a);
+  box-shadow: 0 0 0 0 var(--live-dot-pulse, rgba(255, 69, 58, 0.85));
   animation: live-pulse 1.2s ease-out infinite;
 }
+.header-live-strike {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  opacity: 0.78;
+}
+.header-live-replacement {
+  font-weight: 700;
+}
 @keyframes live-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.85); }
+  0% { box-shadow: 0 0 0 0 var(--live-dot-pulse, rgba(255, 69, 58, 0.85)); }
   70% { box-shadow: 0 0 0 6px rgba(255, 69, 58, 0); }
   100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0); }
 }
@@ -1236,10 +1261,11 @@ header p {
 }
 
 .found-sticker-row .found-sticker-spacer {
-  min-height: 1px;
+  display: none;
 }
 
 .found-sticker-row #found-sticker {
+  grid-column: 1;
   max-width: none;
   margin: 0;
   padding: 0;
@@ -1301,6 +1327,9 @@ header p {
   overflow: hidden;
   isolation: isolate;
   padding: 16px 20px;
+  min-height: 168px;
+  display: flex;
+  align-items: center;
   background:
     linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(247,249,255,0.92) 52%, rgba(232,240,255,0.88) 100%);
 }
@@ -1318,30 +1347,35 @@ header p {
 
 .sticker-collage {
   position: absolute;
-  inset: 0;
+  top: 14px;
+  right: 20px;
+  bottom: 14px;
+  left: 40%;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(8px, 1.1vw, 14px);
+  padding: 0 4px;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.42;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 26%, rgba(255,255,255,0.08) 100%),
-    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.26) 46%, rgba(255,255,255,0) 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.12) 8%, #000 22%, #000 92%, transparent 100%);
+  opacity: 0.94;
 }
 
 .sticker-collage::before {
   content: '';
   position: absolute;
-  inset: 12% -18% 10% 24%;
+  inset: 18% 0;
+  border-radius: 18px;
   background:
+    linear-gradient(90deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.72) 24%, rgba(220,231,255,0.8) 100%),
     repeating-linear-gradient(
-      180deg,
-      rgba(108, 135, 255, 0.08) 0 2px,
-      rgba(108, 135, 255, 0) 2px 34px
+      90deg,
+      rgba(108, 135, 255, 0.08) 0 1px,
+      rgba(108, 135, 255, 0) 1px 42px
     );
-  opacity: 0.55;
-  transform: perspective(540px) rotateX(65deg);
-  transform-origin: center bottom;
+  opacity: 0.92;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.46);
 }
 
 .sticker-collage::after {
@@ -1349,16 +1383,16 @@ header p {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 18%),
-    linear-gradient(90deg, rgba(255,255,255,0) 72%, rgba(167, 196, 255, 0.26) 100%);
+    linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 16%),
+    linear-gradient(90deg, rgba(255,255,255,0) 74%, rgba(167, 196, 255, 0.26) 100%);
   mix-blend-mode: screen;
 }
 
 .sticker-collage-item {
   margin: 0;
-  position: absolute;
-  left: -18%;
-  top: var(--sticker-y);
+  position: relative;
+  z-index: 1;
+  flex: 0 0 var(--sticker-size);
   width: var(--sticker-size);
   aspect-ratio: 1 / 1;
   border-radius: 10px;
@@ -1367,14 +1401,21 @@ header p {
   background: rgba(255,255,255,0.14);
   box-shadow: 0 10px 22px rgba(28,28,30,0.12);
   opacity: 0;
-  transform: translate3d(0, 0, 0) rotate(var(--sticker-rotate)) scale(var(--sticker-scale, 1));
-  animation: sticker-horizon-run var(--sticker-duration, 9s) linear infinite;
-  animation-delay: var(--sticker-delay, 0s);
+  transform: translateY(16px) rotate(var(--sticker-rotate)) scale(0.74);
+  transition:
+    transform 340ms cubic-bezier(0.2, 0.9, 0.2, 1.12),
+    opacity 220ms ease;
   will-change: transform, opacity;
 }
 
 .sticker-collage-item.is-visible {
-  opacity: 1;
+  opacity: 0.98;
+  transform: translateY(0) rotate(var(--sticker-rotate)) scale(var(--sticker-scale, 1));
+}
+
+.sticker-collage.is-clearing .sticker-collage-item.is-visible {
+  opacity: 0;
+  transform: translateY(10px) rotate(var(--sticker-rotate)) scale(calc(var(--sticker-scale, 1) * 0.88));
 }
 
 .sticker-collage-item img {
@@ -1383,26 +1424,6 @@ header p {
   display: block;
   object-fit: cover;
   filter: saturate(1.08) contrast(1.02);
-}
-
-@keyframes sticker-horizon-run {
-  0% {
-    opacity: 0;
-    transform: translate3d(0, 0, 0) rotate(var(--sticker-rotate)) scale(calc(var(--sticker-scale, 1) * 0.72));
-  }
-  10% {
-    opacity: 0.7;
-  }
-  50% {
-    opacity: 0.98;
-  }
-  88% {
-    opacity: 0.62;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(1250%, 0, 0) rotate(var(--sticker-rotate)) scale(calc(var(--sticker-scale, 1) * 1.08));
-  }
 }
 
 .feedback-card {
@@ -1910,7 +1931,23 @@ footer a:hover { color: #fff; }
     transform: translateY(18%);
   }
   .found-sticker-card {
-    padding: 16px;
+    min-height: 210px;
+    padding: 16px 16px 112px;
+    align-items: flex-start;
+  }
+  .found-sticker-copy {
+    max-width: 100%;
+  }
+  .sticker-collage {
+    top: auto;
+    right: 16px;
+    bottom: 14px;
+    left: 16px;
+    justify-content: center;
+    gap: 8px;
+  }
+  .sticker-collage::before {
+    inset: 8% 0;
   }
   .map-section-sub {
     font-size: 12px;
@@ -1961,11 +1998,18 @@ footer a:hover { color: #fff; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .sticker-collage {
+    transition: none;
+  }
   .sticker-collage-item,
   .sticker-collage-item.is-shuffling,
   .sticker-collage-item.is-drifting {
     animation: none;
-    transition: opacity 220ms ease;
+    transition: none;
+    transform: rotate(var(--sticker-rotate));
+  }
+  .sticker-collage-item.is-visible {
+    opacity: 1;
     transform: rotate(var(--sticker-rotate));
   }
 }
@@ -1985,9 +2029,15 @@ footer a:hover { color: #fff; }
         <a class="header-link-btn" href="https://finance.trollrunner.net">Finances</a>
         <a class="header-link-btn" href="https://projects.trollrunner.net">Projects</a>
       </div>
-      <div id="live-status-pill" class="header-live-pill" aria-live="polite">
-        <span class="header-live-dot" aria-hidden="true"></span>
-        <span>Live: Currently trolling around...</span>
+      <div class="header-live-stack" aria-live="polite">
+        <div id="live-status-running-pill" class="header-live-pill header-live-pill--running">
+          <span class="header-live-dot" aria-hidden="true"></span>
+          <span>Live: Currently <span class="header-live-strike">running</span> <span class="header-live-replacement">trolling</span> around...</span>
+        </div>
+        <div id="live-status-coding-pill" class="header-live-pill header-live-pill--coding">
+          <span class="header-live-dot" aria-hidden="true"></span>
+          <span>Live: Currently <span class="header-live-strike">coding</span> <span class="header-live-replacement">trolling</span> around...</span>
+        </div>
       </div>
     </nav>
     <div class="header-spacer">
@@ -2282,8 +2332,10 @@ const geoInflight = new Set();
 // results for similarly named places, which makes markers appear to "jump."
 const ENABLE_LIVE_GEOCODING = false;
 const spotifyTrackLabelCache = new Map();
-const LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
-const LIVE_STATUS_OVERRIDE_KEY = 'trollrunner_live_status_override';
+const SHARED_STATUS_META_ID = '__trollrunner_live_status_meta__';
+const LIVE_RUNNING_STATUS_KEY = 'trollrunner_live_status_running_enabled';
+const LIVE_CODING_STATUS_KEY = 'trollrunner_live_status_coding_enabled';
+const LEGACY_LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
 const DATE_COUNTS = {};
 DATA.forEach(d => {
   d.isoDate = toIsoDate(d.date);
@@ -2306,19 +2358,40 @@ function isSupabaseConfigured() {
   return true;
 }
 
-function applyLiveStatusVisibility() {
-  const livePill = document.getElementById('live-status-pill');
-  if (!livePill) return;
-  const enabled = localStorage.getItem(LIVE_STATUS_KEY) === '1';
-  livePill.classList.toggle('is-visible', enabled);
+function readStoredLiveStatus(key, legacyKey = '') {
+  const raw = localStorage.getItem(key);
+  if (raw === '1' || raw === '0') return raw === '1';
+  if (legacyKey) {
+    const legacyRaw = localStorage.getItem(legacyKey);
+    if (legacyRaw === '1' || legacyRaw === '0') return legacyRaw === '1';
+  }
+  return false;
 }
 
-function hasManualLiveStatusOverride() {
-  return localStorage.getItem(LIVE_STATUS_OVERRIDE_KEY) === '1';
+function writeStoredLiveStatus(key, enabled, legacyKey = '') {
+  localStorage.setItem(key, enabled ? '1' : '0');
+  if (legacyKey) localStorage.setItem(legacyKey, enabled ? '1' : '0');
+}
+
+function applyLiveStatusVisibility() {
+  const runningPill = document.getElementById('live-status-running-pill');
+  const codingPill = document.getElementById('live-status-coding-pill');
+  if (runningPill) {
+    runningPill.classList.toggle('is-visible', readStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, LEGACY_LIVE_STATUS_KEY));
+  }
+  if (codingPill) {
+    codingPill.classList.toggle('is-visible', readStoredLiveStatus(LIVE_CODING_STATUS_KEY));
+  }
 }
 
 window.addEventListener('storage', (event) => {
-  if (event.key === LIVE_STATUS_KEY) applyLiveStatusVisibility();
+  if ([
+    LIVE_RUNNING_STATUS_KEY,
+    LIVE_CODING_STATUS_KEY,
+    LEGACY_LIVE_STATUS_KEY,
+  ].includes(event.key)) {
+    applyLiveStatusVisibility();
+  }
 });
 
 applyLiveStatusVisibility();
@@ -3063,26 +3136,54 @@ function loadStoredUpdates() {
   return readCookieValue(ADMIN_UPDATES_KEY);
 }
 
-function parseSharedUpdatesPayload(payload) {
+function getSharedUpdatesArray(payload) {
   if (Array.isArray(payload)) return payload;
   if (payload && Array.isArray(payload.updates)) return payload.updates;
   return [];
 }
 
-function parseSharedLiveStatusPayload(payload) {
-  if (!payload || typeof payload !== 'object') return null;
-  if (typeof payload.live_status_enabled === 'boolean') return payload.live_status_enabled;
-  if (payload.live_status_enabled === '1' || payload.live_status_enabled === '0') {
-    return payload.live_status_enabled === '1';
-  }
+function isSharedStatusMetaItem(item) {
+  return Boolean(item) && typeof item === 'object' && item.id === SHARED_STATUS_META_ID;
+}
+
+function parseSharedUpdatesPayload(payload) {
+  return getSharedUpdatesArray(payload).filter(item => !isSharedStatusMetaItem(item));
+}
+
+function parseSharedStatusFlag(value) {
+  if (typeof value === 'boolean') return value;
+  if (value === '1' || value === '0') return value === '1';
   return null;
 }
 
+function parseSharedLiveStatusesPayload(payload) {
+  const rawUpdates = getSharedUpdatesArray(payload);
+  const meta = rawUpdates.find(isSharedStatusMetaItem);
+  const statuses = {
+    running: meta && meta.liveStatuses ? parseSharedStatusFlag(meta.liveStatuses.running) : null,
+    coding: meta && meta.liveStatuses ? parseSharedStatusFlag(meta.liveStatuses.coding) : null,
+  };
+
+  if (payload && typeof payload === 'object') {
+    if (statuses.running === null) {
+      statuses.running = parseSharedStatusFlag(payload.live_status_running_enabled);
+    }
+    if (statuses.coding === null) {
+      statuses.coding = parseSharedStatusFlag(payload.live_status_coding_enabled);
+    }
+    if (statuses.running === null) {
+      statuses.running = parseSharedStatusFlag(payload.live_status_enabled);
+    }
+  }
+
+  return statuses;
+}
+
 function parseJsonSharedStatePayload(payload) {
-  if (!payload || typeof payload !== 'object') return { updates: [], liveStatusEnabled: null };
+  if (!payload || typeof payload !== 'object') return { updates: [], liveStatuses: { running: null, coding: null } };
   return {
     updates: parseSharedUpdatesPayload(payload),
-    liveStatusEnabled: null,
+    liveStatuses: parseSharedLiveStatusesPayload(payload),
   };
 }
 
@@ -3104,7 +3205,7 @@ async function parseSupabaseError(response) {
 }
 
 async function loadSharedStateFromBackend() {
-  if (!isSupabaseConfigured()) return { updates: [], liveStatusEnabled: null };
+  if (!isSupabaseConfigured()) return { updates: [], liveStatuses: { running: null, coding: null } };
   try {
     const qs = new URLSearchParams({
       select: 'updates,live_status_enabled',
@@ -3119,28 +3220,28 @@ async function loadSharedStateFromBackend() {
     });
     if (!response.ok) {
       console.warn('Shared sync read failed on homepage:', await parseSupabaseError(response));
-      return { updates: [], liveStatusEnabled: null };
+      return { updates: [], liveStatuses: { running: null, coding: null } };
     }
     const json = await response.json();
     const payload = Array.isArray(json) ? json[0] : json;
     return {
       updates: parseSharedUpdatesPayload(payload),
-      liveStatusEnabled: parseSharedLiveStatusPayload(payload),
+      liveStatuses: parseSharedLiveStatusesPayload(payload),
     };
   } catch {
-    return { updates: [], liveStatusEnabled: null };
+    return { updates: [], liveStatuses: { running: null, coding: null } };
   }
 }
 
 async function loadSharedStateFromJsonEndpoint() {
-  if (!SHARED_UPDATES_JSON_URL) return { updates: [], liveStatusEnabled: null };
+  if (!SHARED_UPDATES_JSON_URL) return { updates: [], liveStatuses: { running: null, coding: null } };
   try {
     const response = await fetch(`${SHARED_UPDATES_JSON_URL}?v=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) return { updates: [], liveStatusEnabled: null };
+    if (!response.ok) return { updates: [], liveStatuses: { running: null, coding: null } };
     const payload = await response.json();
     return parseJsonSharedStatePayload(payload);
   } catch {
-    return { updates: [], liveStatusEnabled: null };
+    return { updates: [], liveStatuses: { running: null, coding: null } };
   }
 }
 
@@ -3154,10 +3255,16 @@ async function loadSharedState() {
       ...(Array.isArray(supabaseState.updates) ? supabaseState.updates : []),
       ...(Array.isArray(jsonState.updates) ? jsonState.updates : []),
     ],
-    liveStatusEnabled:
-      typeof supabaseState.liveStatusEnabled === 'boolean'
-        ? supabaseState.liveStatusEnabled
-        : jsonState.liveStatusEnabled,
+    liveStatuses: {
+      running:
+        typeof supabaseState.liveStatuses?.running === 'boolean'
+          ? supabaseState.liveStatuses.running
+          : jsonState.liveStatuses?.running,
+      coding:
+        typeof supabaseState.liveStatuses?.coding === 'boolean'
+          ? supabaseState.liveStatuses.coding
+          : jsonState.liveStatuses?.coding,
+    },
   };
 }
 
@@ -3166,10 +3273,13 @@ async function loadCustomUpdates(sharedStateOverride = null) {
   if (!wrap) return;
   const sharedState = sharedStateOverride || await loadSharedState();
   const sharedUpdates = sharedState.updates;
-  if (sharedState.liveStatusEnabled !== null && !hasManualLiveStatusOverride()) {
-    localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
-    applyLiveStatusVisibility();
+  if (typeof sharedState.liveStatuses?.running === 'boolean') {
+    writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, sharedState.liveStatuses.running, LEGACY_LIVE_STATUS_KEY);
   }
+  if (typeof sharedState.liveStatuses?.coding === 'boolean') {
+    writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, sharedState.liveStatuses.coding);
+  }
+  applyLiveStatusVisibility();
   const source = Array.isArray(sharedUpdates) ? sharedUpdates : [];
   const deduped = [];
   const seen = new Set();
@@ -3197,10 +3307,13 @@ async function loadCustomUpdates(sharedStateOverride = null) {
 
 async function refreshSharedStateFromBackend() {
   const sharedState = await loadSharedState();
-  if (sharedState.liveStatusEnabled !== null) {
-    localStorage.setItem(LIVE_STATUS_KEY, sharedState.liveStatusEnabled ? '1' : '0');
-    applyLiveStatusVisibility();
+  if (typeof sharedState.liveStatuses?.running === 'boolean') {
+    writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, sharedState.liveStatuses.running, LEGACY_LIVE_STATUS_KEY);
   }
+  if (typeof sharedState.liveStatuses?.coding === 'boolean') {
+    writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, sharedState.liveStatuses.coding);
+  }
+  applyLiveStatusVisibility();
   await loadCustomUpdates(sharedState);
 }
 
@@ -3273,13 +3386,18 @@ function getStickerCollageImages() {
   });
 }
 
-const STICKER_HORIZON_LANES = [
-  { y: '14%', size: '10.5%', rotate: '-6deg', duration: '7.8s', scale: '0.92' },
-  { y: '28%', size: '12%', rotate: '4deg', duration: '9.1s', scale: '1' },
-  { y: '43%', size: '13.5%', rotate: '-5deg', duration: '10.3s', scale: '1.08' },
-  { y: '59%', size: '12.2%', rotate: '6deg', duration: '8.7s', scale: '1' },
-  { y: '74%', size: '10.8%', rotate: '-4deg', duration: '9.8s', scale: '0.94' }
+const STICKER_ROW_SLOTS = [
+  { size: '14%', rotate: '-6deg', scale: '0.92' },
+  { size: '15%', rotate: '4deg', scale: '1' },
+  { size: '16%', rotate: '-5deg', scale: '1.08' },
+  { size: '15%', rotate: '6deg', scale: '1' },
+  { size: '14%', rotate: '-4deg', scale: '0.94' }
 ];
+const STICKER_REVEAL_INTERVAL_MS = 320;
+const STICKER_FULL_ROW_HOLD_MS = 1400;
+const STICKER_CLEAR_MS = 280;
+const STICKER_RESET_GAP_MS = 240;
+let stickerCollageTimers = [];
 
 function shuffleArray(list) {
   const copy = [...list];
@@ -3290,40 +3408,78 @@ function shuffleArray(list) {
   return copy;
 }
 
+function clearStickerCollageTimers() {
+  stickerCollageTimers.forEach(timer => window.clearTimeout(timer));
+  stickerCollageTimers = [];
+}
+
+function queueStickerCollageTimer(callback, delay) {
+  const timer = window.setTimeout(() => {
+    stickerCollageTimers = stickerCollageTimers.filter(activeTimer => activeTimer !== timer);
+    callback();
+  }, delay);
+  stickerCollageTimers.push(timer);
+  return timer;
+}
+
 function renderStickerCollage() {
   const collage = document.getElementById('sticker-collage');
   if (!collage) return;
 
+  clearStickerCollageTimers();
   const images = getStickerCollageImages();
   collage.innerHTML = '';
   if (!images.length) return;
 
-  const workingImages = shuffleArray(images);
-  const visibleCount = Math.min(workingImages.length, 12);
+  const visibleCount = Math.min(images.length, STICKER_ROW_SLOTS.length);
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  Array.from({ length: visibleCount }).forEach((_, idx) => {
-    const lane = STICKER_HORIZON_LANES[idx % STICKER_HORIZON_LANES.length];
-    const tile = document.createElement('figure');
-    tile.className = 'sticker-collage-item';
-    tile.style.setProperty('--sticker-y', lane.y);
-    tile.style.setProperty('--sticker-size', lane.size);
-    tile.style.setProperty('--sticker-rotate', lane.rotate);
-    tile.style.setProperty('--sticker-duration', lane.duration);
-    tile.style.setProperty('--sticker-scale', lane.scale);
-    tile.style.setProperty('--sticker-delay', `${idx * -0.82}s`);
+  const buildCycleTiles = () => {
+    collage.classList.remove('is-clearing');
+    collage.innerHTML = '';
 
-    const image = workingImages[idx];
-    tile.setAttribute('title', image.title);
-    const img = document.createElement('img');
-    img.src = image.src;
-    img.alt = '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
+    const cycleImages = shuffleArray(images).slice(0, visibleCount);
+    return cycleImages.map((image, idx) => {
+      const slot = STICKER_ROW_SLOTS[idx];
+      const tile = document.createElement('figure');
+      tile.className = 'sticker-collage-item';
+      tile.style.setProperty('--sticker-size', slot.size);
+      tile.style.setProperty('--sticker-rotate', slot.rotate);
+      tile.style.setProperty('--sticker-scale', slot.scale);
+      tile.setAttribute('title', image.title);
 
-    tile.appendChild(img);
-    collage.appendChild(tile);
-    window.setTimeout(() => tile.classList.add('is-visible'), 30);
-  });
+      const img = document.createElement('img');
+      img.src = image.src;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+
+      tile.appendChild(img);
+      collage.appendChild(tile);
+      return tile;
+    });
+  };
+
+  const runCycle = () => {
+    const tiles = buildCycleTiles();
+    if (!tiles.length) return;
+
+    if (prefersReducedMotion) {
+      tiles.forEach(tile => tile.classList.add('is-visible'));
+      return;
+    }
+
+    tiles.forEach((tile, idx) => {
+      queueStickerCollageTimer(() => tile.classList.add('is-visible'), idx * STICKER_REVEAL_INTERVAL_MS);
+    });
+
+    const revealCompleteMs = (tiles.length - 1) * STICKER_REVEAL_INTERVAL_MS;
+    const clearStartMs = revealCompleteMs + STICKER_FULL_ROW_HOLD_MS;
+    queueStickerCollageTimer(() => collage.classList.add('is-clearing'), clearStartMs);
+    queueStickerCollageTimer(runCycle, clearStartMs + STICKER_CLEAR_MS + STICKER_RESET_GAP_MS);
+  };
+
+  runCycle();
 }
 
 function removeDuplicateFoundStickerSections() {
