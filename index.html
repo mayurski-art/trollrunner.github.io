@@ -1225,6 +1225,26 @@ header p {
   padding: 0 24px;
 }
 
+.found-sticker-row {
+  max-width: 1180px;
+  margin: 0 auto 40px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.found-sticker-row .found-sticker-spacer {
+  min-height: 1px;
+}
+
+.found-sticker-row #found-sticker {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
 .updates-feedback-grid {
   max-width: 1180px;
   margin: 0 auto 40px;
@@ -1274,6 +1294,59 @@ header p {
   line-height: 1.6;
   color: #4a4a4a;                  /* readable gray for description */
   white-space: pre-line;
+}
+
+.found-sticker-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 16px 20px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(247,249,255,0.92) 52%, rgba(232,240,255,0.88) 100%);
+}
+
+.found-sticker-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 300px;
+}
+
+.found-sticker-copy p {
+  color: #303036;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.58);
+}
+
+.sticker-collage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.34;
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 14%, #000 38%, #000 100%);
+}
+
+.sticker-collage-item {
+  margin: 0;
+  position: absolute;
+  left: var(--sticker-x);
+  top: var(--sticker-y);
+  width: var(--sticker-size);
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.46);
+  background: rgba(255,255,255,0.16);
+  box-shadow: 0 8px 18px rgba(28,28,30,0.1);
+  transform: rotate(var(--sticker-rotate));
+}
+
+.sticker-collage-item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(1.08) contrast(1.02);
 }
 
 .feedback-card {
@@ -1540,6 +1613,7 @@ footer a:hover { color: #fff; }
   #biography,
   #map-section,
   .updates-feedback-grid,
+  .found-sticker-row,
   #updates,
   #feedback,
   #found-sticker,
@@ -1555,6 +1629,15 @@ footer a:hover { color: #fff; }
   .updates-feedback-grid {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .found-sticker-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .found-sticker-row .found-sticker-spacer {
+    display: none;
   }
 
   #intro-band {
@@ -1769,6 +1852,9 @@ footer a:hover { color: #fff; }
     width: min(100%, 360px);
     opacity: 0.24;
     transform: translateY(18%);
+  }
+  .found-sticker-card {
+    padding: 16px;
   }
   .map-section-sub {
     font-size: 12px;
@@ -1994,15 +2080,21 @@ footer a:hover { color: #fff; }
   </section>
 </div>
 
-<section id="found-sticker">
-  <h2>Found a sticker?</h2>
-  <div class="update-card">
-    <p>
-      <strong>#TROLLRUNNER</strong><br><br>
-      Share your discovery on X with #TrollRunner and tag @troll_runner.
-    </p>
-  </div>
-</section>
+<div class="found-sticker-row">
+  <div class="found-sticker-spacer" aria-hidden="true"></div>
+  <section id="found-sticker">
+    <h2>Found a sticker?</h2>
+    <div class="update-card found-sticker-card">
+      <div id="sticker-collage" class="sticker-collage" aria-hidden="true"></div>
+      <div class="found-sticker-copy">
+        <p>
+          <strong>#TROLLRUNNER</strong><br><br>
+          Share your discovery on X with #TrollRunner and tag @troll_runner.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
 
 <footer>
   <div class="footer-inner">
@@ -3088,6 +3180,65 @@ function submitFeedback() {
   status.textContent = `Feedback sent to admin system (${ai.topic}, ${ai.priority} priority).`;
 }
 
+function getStickerCollageImages() {
+  const images = [];
+  DATA.forEach(item => {
+    const urls = [];
+    if (typeof item.imageUrl === 'string') urls.push(item.imageUrl);
+    if (Array.isArray(item.imageUrls)) urls.push(...item.imageUrls);
+    urls.forEach((url, idx) => {
+      if (typeof url !== 'string') return;
+      const src = url.trim();
+      if (!/^https:\/\/i\.imgur\.com\/.+\.jpe?g(?:\?.*)?$/i.test(src)) return;
+      images.push({
+        src,
+        alt: `${item.name}${urls.length > 1 ? ` sticker ${idx + 1}` : ' sticker'}`,
+        title: item.imageTitle || `${item.name}, ${item.city}, California`
+      });
+    });
+  });
+
+  const seen = new Set();
+  return images.filter(image => {
+    const key = image.src.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function renderStickerCollage() {
+  const collage = document.getElementById('sticker-collage');
+  if (!collage) return;
+
+  const images = getStickerCollageImages();
+  collage.innerHTML = '';
+  const columnCycle = [11, 27, 43, 59, 75, 86];
+  const rowCycle = [9, 29, 49, 69];
+  const sizeCycle = ['13%', '12%', '14%', '11%', '13.5%', '12.5%'];
+  const rotateCycle = ['-7deg', '5deg', '-4deg', '6deg', '-5deg', '4deg'];
+
+  images.forEach((image, idx) => {
+    const reverseIdx = images.length - 1 - idx;
+    const tile = document.createElement('figure');
+    tile.className = 'sticker-collage-item';
+    tile.style.setProperty('--sticker-x', `${columnCycle[reverseIdx % columnCycle.length]}%`);
+    tile.style.setProperty('--sticker-y', `${rowCycle[(idx * 2) % rowCycle.length]}%`);
+    tile.style.setProperty('--sticker-size', sizeCycle[idx % sizeCycle.length]);
+    tile.style.setProperty('--sticker-rotate', rotateCycle[idx % rotateCycle.length]);
+    tile.setAttribute('title', image.title);
+
+    const img = document.createElement('img');
+    img.src = image.src;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+
+    tile.appendChild(img);
+    collage.appendChild(tile);
+  });
+}
+
 function removeDuplicateFoundStickerSections() {
   const sections = document.querySelectorAll('section#found-sticker');
   sections.forEach((node, idx) => {
@@ -3175,7 +3326,7 @@ document.getElementById('admin-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') goToAdmin();
 });
 
-initMap(); buildTabs(); updateStaticStats(); renderPins(); renderList(); initPanelResizer(); syncSidebarWidthForViewport(); syncSidebarTrackerForViewport(); loadCustomUpdates(); removeDuplicateFoundStickerSections(); setupAnimationShowcase();
+initMap(); buildTabs(); updateStaticStats(); renderPins(); renderList(); initPanelResizer(); syncSidebarWidthForViewport(); syncSidebarTrackerForViewport(); loadCustomUpdates(); renderStickerCollage(); removeDuplicateFoundStickerSections(); setupAnimationShowcase();
 if (isSupabaseConfigured()) {
   window.setInterval(refreshSharedStateFromBackend, SUPABASE_SHARED_STATE_REFRESH_MS);
 }
