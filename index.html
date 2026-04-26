@@ -1322,23 +1322,59 @@ header p {
   overflow: hidden;
   pointer-events: none;
   z-index: 1;
-  opacity: 0.34;
-  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.2) 14%, #000 38%, #000 100%);
+  opacity: 0.42;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 26%, rgba(255,255,255,0.08) 100%),
+    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.26) 46%, rgba(255,255,255,0) 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.12) 8%, #000 22%, #000 92%, transparent 100%);
+}
+
+.sticker-collage::before {
+  content: '';
+  position: absolute;
+  inset: 12% -18% 10% 24%;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(108, 135, 255, 0.08) 0 2px,
+      rgba(108, 135, 255, 0) 2px 34px
+    );
+  opacity: 0.55;
+  transform: perspective(540px) rotateX(65deg);
+  transform-origin: center bottom;
+}
+
+.sticker-collage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 18%),
+    linear-gradient(90deg, rgba(255,255,255,0) 72%, rgba(167, 196, 255, 0.26) 100%);
+  mix-blend-mode: screen;
 }
 
 .sticker-collage-item {
   margin: 0;
   position: absolute;
-  left: var(--sticker-x);
+  left: -22%;
   top: var(--sticker-y);
   width: var(--sticker-size);
   aspect-ratio: 1 / 1;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.46);
-  background: rgba(255,255,255,0.16);
-  box-shadow: 0 8px 18px rgba(28,28,30,0.1);
-  transform: rotate(var(--sticker-rotate));
+  background: rgba(255,255,255,0.14);
+  box-shadow: 0 10px 22px rgba(28,28,30,0.12);
+  opacity: 0;
+  transform: translate3d(0, 0, 0) rotate(var(--sticker-rotate)) scale(var(--sticker-scale, 1));
+  animation: sticker-horizon-run var(--sticker-duration, 9s) linear infinite;
+  animation-delay: var(--sticker-delay, 0s);
+  will-change: transform, opacity;
+}
+
+.sticker-collage-item.is-visible {
+  opacity: 1;
 }
 
 .sticker-collage-item img {
@@ -1347,6 +1383,26 @@ header p {
   display: block;
   object-fit: cover;
   filter: saturate(1.08) contrast(1.02);
+}
+
+@keyframes sticker-horizon-run {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(var(--sticker-rotate)) scale(calc(var(--sticker-scale, 1) * 0.72));
+  }
+  10% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(132%, 0, 0) rotate(var(--sticker-rotate)) scale(calc(var(--sticker-scale, 1) * 1.08));
+  }
 }
 
 .feedback-card {
@@ -1901,6 +1957,16 @@ footer a:hover { color: #fff; }
   }
   #photo-panel h4 {
     font-size: 17px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-collage-item,
+  .sticker-collage-item.is-shuffling,
+  .sticker-collage-item.is-drifting {
+    animation: none;
+    transition: opacity 220ms ease;
+    transform: rotate(var(--sticker-rotate));
   }
 }
 </style>
@@ -3207,27 +3273,47 @@ function getStickerCollageImages() {
   });
 }
 
+const STICKER_HORIZON_LANES = [
+  { y: '14%', size: '10.5%', rotate: '-6deg', duration: '7.8s', scale: '0.92' },
+  { y: '28%', size: '12%', rotate: '4deg', duration: '9.1s', scale: '1' },
+  { y: '43%', size: '13.5%', rotate: '-5deg', duration: '10.3s', scale: '1.08' },
+  { y: '59%', size: '12.2%', rotate: '6deg', duration: '8.7s', scale: '1' },
+  { y: '74%', size: '10.8%', rotate: '-4deg', duration: '9.8s', scale: '0.94' }
+];
+
+function shuffleArray(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 function renderStickerCollage() {
   const collage = document.getElementById('sticker-collage');
   if (!collage) return;
 
   const images = getStickerCollageImages();
   collage.innerHTML = '';
-  const columnCycle = [11, 27, 43, 59, 75, 86];
-  const rowCycle = [9, 29, 49, 69];
-  const sizeCycle = ['13%', '12%', '14%', '11%', '13.5%', '12.5%'];
-  const rotateCycle = ['-7deg', '5deg', '-4deg', '6deg', '-5deg', '4deg'];
+  if (!images.length) return;
 
-  images.forEach((image, idx) => {
-    const reverseIdx = images.length - 1 - idx;
+  const workingImages = shuffleArray(images);
+  const visibleCount = Math.min(workingImages.length, 12);
+
+  Array.from({ length: visibleCount }).forEach((_, idx) => {
+    const lane = STICKER_HORIZON_LANES[idx % STICKER_HORIZON_LANES.length];
     const tile = document.createElement('figure');
     tile.className = 'sticker-collage-item';
-    tile.style.setProperty('--sticker-x', `${columnCycle[reverseIdx % columnCycle.length]}%`);
-    tile.style.setProperty('--sticker-y', `${rowCycle[(idx * 2) % rowCycle.length]}%`);
-    tile.style.setProperty('--sticker-size', sizeCycle[idx % sizeCycle.length]);
-    tile.style.setProperty('--sticker-rotate', rotateCycle[idx % rotateCycle.length]);
-    tile.setAttribute('title', image.title);
+    tile.style.setProperty('--sticker-y', lane.y);
+    tile.style.setProperty('--sticker-size', lane.size);
+    tile.style.setProperty('--sticker-rotate', lane.rotate);
+    tile.style.setProperty('--sticker-duration', lane.duration);
+    tile.style.setProperty('--sticker-scale', lane.scale);
+    tile.style.setProperty('--sticker-delay', `${idx * -0.82}s`);
 
+    const image = workingImages[idx];
+    tile.setAttribute('title', image.title);
     const img = document.createElement('img');
     img.src = image.src;
     img.alt = '';
@@ -3236,6 +3322,7 @@ function renderStickerCollage() {
 
     tile.appendChild(img);
     collage.appendChild(tile);
+    window.setTimeout(() => tile.classList.add('is-visible'), 30);
   });
 }
 
