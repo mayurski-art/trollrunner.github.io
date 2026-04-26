@@ -1329,7 +1329,7 @@ header p {
   padding: 18px 20px;
   min-height: 232px;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   border: 1px solid rgba(255,255,255,0.08);
   background:
     radial-gradient(circle at 82% 34%, rgba(112, 140, 255, 0.16), transparent 24%),
@@ -1370,6 +1370,8 @@ header p {
   position: relative;
   z-index: 4;
   max-width: 310px;
+  align-self: flex-start;
+  margin-top: -10px;
 }
 
 .found-sticker-copy p {
@@ -1377,9 +1379,15 @@ header p {
   text-shadow: 0 2px 18px rgba(0,0,0,0.4);
 }
 
-.found-sticker-copy strong {
-  color: #9bff83;
+.found-sticker-copy .found-sticker-hashtag {
+  color: #89ff6d;
   letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.found-sticker-copy .found-sticker-handle {
+  color: #fff000;
+  font-weight: 700;
 }
 
 .sticker-collage {
@@ -1645,6 +1653,12 @@ footer a:hover { color: #fff; }
 .footer-art-credit a {
   color: rgba(255,255,255,0.78);
   text-decoration: none;
+}
+.footer-art-credit .footer-credit-swish {
+  color: #89ff6d;
+}
+.footer-art-credit .footer-credit-troll {
+  color: #fff000;
 }
 .footer-art-credit a:hover {
   color: #fff;
@@ -2236,8 +2250,7 @@ footer a:hover { color: #fff; }
       <div id="sticker-collage" class="sticker-collage" aria-hidden="true"></div>
       <div class="found-sticker-copy">
         <p>
-          <strong>#TROLLRUNNER</strong><br><br>
-          Share your discovery on X with #TrollRunner and tag @troll_runner.
+          Share your picture on X <span class="found-sticker-hashtag">#TROLLRUNNER</span> and tag <span class="found-sticker-handle">@troll_runner</span>.
         </p>
       </div>
     </div>
@@ -2267,7 +2280,7 @@ footer a:hover { color: #fff; }
         </div>
       </div>
       <div class="footer-project">Community Project</div>
-      <div class="footer-art-credit">Original Art: <a href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a> | Adapted: <a href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></div>
+      <div class="footer-art-credit">Original Art: <a class="footer-credit-swish" href="https://twitter.com/SwishPng" target="_blank" rel="noreferrer">@SwishPng</a> | Adapted: <a class="footer-credit-troll" href="https://twitter.com/troll_runner" target="_blank" rel="noreferrer">@troll_runner</a></div>
     </div>
   </div>
 </footer>
