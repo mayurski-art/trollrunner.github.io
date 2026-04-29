@@ -59,7 +59,7 @@ html, body {
 
 /* ── HEADER ── */
 header {
- padding: 28px 20px 18px;
+  padding: 28px 20px 18px;
   background: linear-gradient(178deg, #14143a 0%, #21439f 50%, #000000 100%);
   border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
 }
@@ -467,14 +467,17 @@ header p {
   transition: opacity 460ms ease, transform 520ms ease, filter 460ms ease;
 }
 .animation-troll-poster {
-  inset: 4%;
-  width: 92%;
-  height: 92%;
-  object-fit: contain;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   object-position: center 32%;
   opacity: 0;
-  transform: scale(0.92);
-  filter: contrast(1.08) saturate(1.06);
+  transform: scale(1.02);
+  filter: grayscale(0.08) sepia(0.06) contrast(0.94) saturate(0.78) brightness(0.82) blur(0.45px);
+  mix-blend-mode: screen;
+  mask-image: radial-gradient(circle at 50% 42%, #000 0 38%, rgba(0,0,0,0.96) 58%, rgba(0,0,0,0.38) 76%, transparent 96%);
+  -webkit-mask-image: radial-gradient(circle at 50% 42%, #000 0 38%, rgba(0,0,0,0.96) 58%, rgba(0,0,0,0.38) 76%, transparent 96%);
 }
 .animation-static-layer {
   position: absolute;
@@ -537,16 +540,17 @@ header p {
   filter: contrast(1.16) brightness(1.08);
 }
 .bio-animation-card.is-trolled .animation-primary-poster {
-  opacity: 0;
-  transform: scale(1.03);
-  filter: grayscale(0.3) brightness(0.68) blur(2px);
+  opacity: 0.18;
+  transform: scale(1.02);
+  filter: grayscale(0.52) brightness(0.52) blur(2.4px);
 }
 .bio-animation-card.is-trolled .animation-troll-poster {
-  opacity: 1;
-  transform: scale(0.88);
+  opacity: 0.9;
+  transform: scale(1);
 }
 .bio-animation-card.is-trolled .animation-static-layer {
-  opacity: 0.14;
+  opacity: 0.28;
+  filter: contrast(1.08) brightness(0.92);
 }
 .bio-animation-card.is-trolled .animation-live-top .animation-live-label,
 .bio-animation-card.is-trolled .animation-live-top .animation-live-badge {
@@ -561,48 +565,38 @@ header p {
   overflow: hidden;
   pointer-events: none;
 }
-.animation-live-overlay::before {
-  content: "";
+.animation-live-corner {
   position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
-    linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7));
-  background-size:
-    34px 2px,
-    2px 34px,
-    34px 2px,
-    2px 34px,
-    34px 2px,
-    2px 34px,
-    34px 2px,
-    2px 34px;
-  background-position:
-    18px 18px,
-    18px 18px,
-    calc(100% - 52px) 18px,
-    calc(100% - 20px) 18px,
-    18px calc(100% - 20px),
-    18px calc(100% - 52px),
-    calc(100% - 52px) calc(100% - 20px),
-    calc(100% - 20px) calc(100% - 52px);
-  background-repeat: no-repeat;
+  width: 34px;
+  height: 34px;
+  border-color: rgba(255,255,255,0.7);
+  border-style: solid;
+  border-width: 0;
   opacity: 0.72;
 }
-.animation-live-overlay::after {
-  content: "";
-  position: absolute;
-  inset: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
-  border-radius: 12px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.04);
+.animation-live-corner--tl {
+  top: 18px;
+  left: 18px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+.animation-live-corner--tr {
+  top: 18px;
+  right: 18px;
+  border-top-width: 2px;
+  border-right-width: 2px;
+}
+.animation-live-corner--bl {
+  bottom: 18px;
+  left: 18px;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+.animation-live-corner--br {
+  right: 18px;
+  bottom: 18px;
+  border-right-width: 2px;
+  border-bottom-width: 2px;
 }
 .animation-live-focus {
   position: absolute;
@@ -661,6 +655,7 @@ header p {
 .animation-live-bottom {
   padding: 0 2px 2px;
   transform: translateY(-5px);
+  scale: 0.97;
 }
 .animation-live-status {
   display: inline-flex;
@@ -740,6 +735,12 @@ header p {
   border-radius: 1.5px;
   background: linear-gradient(90deg, #5cff7c, #96ff5c);
   box-shadow: 0 0 8px rgba(116,255,108,0.3);
+  transition: width 220ms ease, opacity 220ms ease, box-shadow 220ms ease;
+}
+.bio-animation-card.is-trolled .animation-live-battery-level {
+  width: 0;
+  opacity: 0;
+  box-shadow: none;
 }
 @keyframes live-camera-dot {
   0% {
@@ -2468,6 +2469,10 @@ footer a:hover { color: #fff; }
           <img class="animation-poster animation-troll-poster" src="assets/animations/troll-grin.gif" alt="Grinning trollface reveal">
         </div>
         <div class="animation-live-overlay" aria-hidden="true">
+          <span class="animation-live-corner animation-live-corner--tl"></span>
+          <span class="animation-live-corner animation-live-corner--tr"></span>
+          <span class="animation-live-corner animation-live-corner--bl"></span>
+          <span class="animation-live-corner animation-live-corner--br"></span>
           <span class="animation-live-focus"></span>
           <div class="animation-live-ui">
             <div class="animation-live-top">
@@ -2478,7 +2483,7 @@ footer a:hover { color: #fff; }
                   <span class="animation-live-battery-icon" aria-hidden="true">
                     <span class="animation-live-battery-level"></span>
                   </span>
-                  <span>69%</span>
+                  <span data-live-battery-text>69%</span>
                 </span>
               </span>
             </div>
@@ -4011,9 +4016,21 @@ function formatLivePosterCountdown(value) {
   return `00:00:0${value}`;
 }
 
+function resetLivePosterTrollGif() {
+  const trollPoster = document.querySelector('.animation-troll-poster');
+  if (!trollPoster) return;
+
+  const currentSrc = trollPoster.getAttribute('src');
+  if (!currentSrc) return;
+
+  trollPoster.src = '';
+  trollPoster.src = currentSrc;
+}
+
 function setupLivePosterCountdown() {
   const countdownNodes = Array.from(document.querySelectorAll('[data-live-countdown]'));
   const countdownLabelNodes = Array.from(document.querySelectorAll('[data-live-countdown-label]'));
+  const batteryTextNodes = Array.from(document.querySelectorAll('[data-live-battery-text]'));
   const livePosterCard = document.querySelector('[data-live-poster-card]');
   if (!countdownNodes.length) return;
 
@@ -4024,6 +4041,7 @@ function setupLivePosterCountdown() {
 
   let remaining = LIVE_POSTER_COUNTDOWN_START;
   let trolledHoldElapsed = 0;
+  let wasTrolled = false;
 
   const render = () => {
     countdownNodes.forEach(node => {
@@ -4032,9 +4050,17 @@ function setupLivePosterCountdown() {
     countdownLabelNodes.forEach(node => {
       node.textContent = LIVE_POSTER_COUNTDOWN_LABELS[remaining] || 'On Your Mark';
     });
+    batteryTextNodes.forEach(node => {
+      node.textContent = remaining === 0 ? '0%' : '69%';
+    });
     if (livePosterCard) {
+      const isTrolled = remaining === 0;
       livePosterCard.classList.toggle('is-signal-lost', remaining === 1);
-      livePosterCard.classList.toggle('is-trolled', remaining === 0);
+      livePosterCard.classList.toggle('is-trolled', isTrolled);
+      if (isTrolled && !wasTrolled) {
+        resetLivePosterTrollGif();
+      }
+      wasTrolled = isTrolled;
     }
   };
 
