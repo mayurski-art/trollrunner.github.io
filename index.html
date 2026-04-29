@@ -422,7 +422,7 @@ header p {
 .animation-frame {
   position: relative;
   isolation: isolate;
-  aspect-ratio: 10 / 13;
+  aspect-ratio: 10 / 10;
   overflow: hidden;
 }
 .animation-frame::before {
@@ -449,14 +449,15 @@ header p {
   aspect-ratio: 5 / 6;
 }
 .bio-animation-card .animation-frame::before {
-  inset: 10px;
+  inset: calc(10px + 0.1in) 10px calc(10px + 0.1in);
   border-radius: 18px;
 }
 .bio-animation-card .animation-poster {
-  inset: 10px 10px 46px;
+  inset: calc(10px + 0.1in) 10px 10px;
   width: calc(100% - 20px);
-  height: calc(100% - 56px);
+  height: calc(100% - 20px - 0.1in);
   border-radius: 18px;
+  clip-path: inset(0 0 0.1in 0 round 18px);
 }
 .bio-animation-card .animation-credit {
   position: absolute;
@@ -1121,12 +1122,33 @@ header p {
   gap: 12px;
   padding-right: 2px;
 }
+.photo-gallery-item {
+  position: relative;
+}
 #photo-gallery img {
+  display: block;
   width: 100%;
   height: auto;
   border-radius: 16px;
   border: 1px solid rgba(28,28,30,0.08);
   box-shadow: 0 18px 32px rgba(28,28,30,0.08);
+}
+.photo-gallery-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,149,0,0.28);
+  color: #9b4d00;
+  box-shadow: 0 10px 20px rgba(28,28,30,0.14);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .pin {
@@ -2117,7 +2139,7 @@ footer a:hover { color: #fff; }
   </div>
   <div class="stats-grid">
     <div class="stat-card"><div class="val" id="stats-total-stickers">0</div><div class="lbl">Stickers</div></div>
-    <div class="stat-card"><div class="val">99</div><div class="lbl">Miles Ran</div></div>
+    <div class="stat-card"><div class="val">112</div><div class="lbl">Miles Ran</div></div>
     <div class="stat-card"><div class="val" id="stats-total-locations">0</div><div class="lbl">Spots</div></div>
     <div class="stat-card"><div class="val" id="stats-total-cities">0</div><div class="lbl">Cities</div></div>
   </div>
@@ -2341,11 +2363,26 @@ const DATA = [
   {city:"Chino Hills",       name:"Meadows Park",                     date:"Apr 18, 2026", count:6,  px:16, py:56, albumUrl:"https://imgur.com/a/JXfUDHB", imageUrls:["https://i.imgur.com/czb4NZE.jpeg","https://i.imgur.com/hNmPiVF.jpeg","https://i.imgur.com/G3om7gp.jpeg","https://i.imgur.com/76SikQg.jpeg","https://i.imgur.com/BVmfDCq.jpeg","https://i.imgur.com/Q3dp9e1.jpeg"], imageTitle:"Meadows Park, Chino Hills, California"},
   {city:"Chino Hills",       name:"Sunny Meadow Lane",                date:"Apr 18, 2026", count:2,  px:18, py:54, albumUrl:"https://imgur.com/a/v4FbT4o", imageUrls:["https://i.imgur.com/LwAYy2Q.jpeg","https://i.imgur.com/LZBWZYi.jpeg"], imageTitle:"Sunny Meadow Lane, Chino Hills, California"},
   {city:"Chino Hills",       name:"Mystic Canyon Road",               date:"Apr 18, 2026", count:3,  px:20, py:52, albumUrl:"https://imgur.com/a/466HCRZ", imageUrls:["https://i.imgur.com/1r1inS9.jpeg","https://i.imgur.com/gampDHO.jpeg","https://i.imgur.com/MnnhWaI.jpeg"], imageTitle:"Mystic Canyon Road, Chino Hills, California"},
-  {city:"Chino Hills",       name:"Butterfield Ranch Road",           date:"Apr 18, 2026", count:2,  px:14, py:57, albumUrl:"https://imgur.com/a/LaQ3Sfb", imageUrls:["https://i.imgur.com/JovAhEV.jpeg","https://i.imgur.com/4QYCS3V.jpeg"], imageTitle:"Butterfield Ranch Road, Chino Hills, California"},
+  {city:"Chino Hills",       name:"Butterfield Ranch Road",           date:"Apr 18, 2026", dateLabel:"Apr 18, 2026 and Apr 25, 2026", count:3,  px:14, py:57, albumUrl:"https://imgur.com/a/LaQ3Sfb", dropCounts:{"2026-04-18":2,"2026-04-25":1}, imageUrls:["https://i.imgur.com/JovAhEV.jpeg","https://i.imgur.com/4QYCS3V.jpeg","https://i.imgur.com/kZbQkHR.jpeg"], imageTitle:"Butterfield Ranch Road, Chino Hills, California"},
+  {city:"Chino Hills",       name:"Hunters Hill Park",                date:"Apr 25, 2026", count:5,  px:14, py:59, albumUrl:"https://imgur.com/a/ZgLkHrP", imageUrls:["https://i.imgur.com/AXbtb9o.jpeg","https://i.imgur.com/3vIKEaM.jpeg","https://i.imgur.com/Qb4z1Ro.jpeg","https://i.imgur.com/Wqw05Xg.jpeg","https://i.imgur.com/r9UjpM9.jpeg"], specialImageTags:{"https://i.imgur.com/3vIKEaM.jpeg":"100th sticker"}, imageTitle:"Hunters Hill Park, Chino Hills, California"},
+  {city:"Chino Hills",       name:"Hunters Hill Drive",               date:"Apr 25, 2026", count:1,  px:15, py:60, albumUrl:"https://imgur.com/a/1B5OqzF", imageUrl:"https://i.imgur.com/oQaogGK.jpeg", imageTitle:"Hunters Hill Drive, Chino Hills, California"},
+  {city:"Chino Hills",       name:"Torrey Pines Loop/Park",           date:"Apr 25, 2026", count:5,  px:11, py:50, albumUrl:"https://imgur.com/a/IoijY6s", imageUrls:["https://i.imgur.com/Tmt1lJP.jpeg","https://i.imgur.com/doSeZKc.jpeg","https://i.imgur.com/hOldA6d.jpeg","https://i.imgur.com/VnvwBi1.jpeg","https://i.imgur.com/gKIkOdd.jpeg"], imageTitle:"Torrey Pines Loop/Park, Chino Hills, California"},
+  {city:"Chino Hills",       name:"Torrey Pines Drive",               date:"Apr 25, 2026", count:1,  px:11, py:51, albumUrl:"https://imgur.com/a/OMN31PO", imageUrl:"https://i.imgur.com/eHVTj5r.jpeg", imageTitle:"Torrey Pines Drive, Chino Hills, California"},
 ];
 const PROJECT_LOCATION_TAGS = {};
+function normalizeImageTagKey(url) {
+  return typeof url === 'string' ? url.trim().replace(/\?.*$/, '').toLowerCase() : '';
+}
+function getLocationDisplayDate(loc) {
+  return loc?.dateLabel || loc?.date || '';
+}
 DATA.forEach(item => {
   item.project = PROJECT_LOCATION_TAGS[item.name] || null;
+  if (item.specialImageTags && typeof item.specialImageTags === 'object') {
+    item.specialImageTags = Object.fromEntries(
+      Object.entries(item.specialImageTags).map(([url, label]) => [normalizeImageTagKey(url), label])
+    );
+  }
 });
 
 const CITIES = {
@@ -2384,8 +2421,18 @@ const LIVE_CODING_STATUS_KEY = 'trollrunner_live_status_coding_enabled';
 const LEGACY_LIVE_STATUS_KEY = 'trollrunner_live_status_enabled';
 const DATE_COUNTS = {};
 DATA.forEach(d => {
-  d.isoDate = toIsoDate(d.date);
-  DATE_COUNTS[d.isoDate] = (DATE_COUNTS[d.isoDate] || 0) + d.count;
+  if (d.dropCounts && typeof d.dropCounts === 'object') {
+    d.isoDates = Object.keys(d.dropCounts).sort();
+    d.isoDate = d.isoDates[d.isoDates.length - 1] || toIsoDate(d.date);
+    d.isoDates.forEach(iso => {
+      DATE_COUNTS[iso] = (DATE_COUNTS[iso] || 0) + (Number(d.dropCounts[iso]) || 0);
+    });
+  } else {
+    d.isoDate = toIsoDate(d.date);
+    d.isoDates = [d.isoDate];
+    DATE_COUNTS[d.isoDate] = (DATE_COUNTS[d.isoDate] || 0) + d.count;
+  }
+  d.date = getLocationDisplayDate(d);
 });
 const allDropDates = Object.keys(DATE_COUNTS).sort();
 let calendarMonth = allDropDates.length ? new Date(`${allDropDates[allDropDates.length-1]}T00:00:00`) : new Date();
@@ -2601,7 +2648,7 @@ function getVisibleData() {
   return DATA.filter(d =>
     (!activeCity || d.city === activeCity) &&
     (!searchTerm || d.name.toLowerCase().includes(searchTerm) || d.city.toLowerCase().includes(searchTerm)) &&
-    (!selectedDate || d.isoDate === selectedDate)
+    (!selectedDate || (Array.isArray(d.isoDates) ? d.isoDates.includes(selectedDate) : d.isoDate === selectedDate))
   );
 }
 
@@ -3057,12 +3104,22 @@ async function updatePhotoPanel(loc) {
     app.classList.add('show-photo');
     gallery.innerHTML = '';
     imageUrls.forEach((url, index) => {
+      const frame = document.createElement('div');
+      frame.className = 'photo-gallery-item';
       const img = document.createElement('img');
       img.src = url;
       img.alt = imageUrls.length > 1 ? `${loc.imageTitle || loc.name} (${index + 1})` : (loc.imageTitle || loc.name);
       img.loading = 'lazy';
       img.referrerPolicy = 'no-referrer';
-      gallery.appendChild(img);
+      frame.appendChild(img);
+      const imageTag = loc.specialImageTags ? loc.specialImageTags[normalizeImageTagKey(url)] : '';
+      if (imageTag) {
+        const badge = document.createElement('span');
+        badge.className = 'photo-gallery-badge';
+        badge.textContent = imageTag;
+        frame.appendChild(badge);
+      }
+      gallery.appendChild(frame);
     });
     title.textContent = loc.name;
     if (loc.project) {
