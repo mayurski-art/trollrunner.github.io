@@ -55,6 +55,8 @@ html, body {
 
 /* ── HEADER ── */
 header {
+  position: relative;
+  overflow: hidden;
   padding: 28px 20px 18px;
   background: linear-gradient(178deg, #14143a 0%, #21439f 50%, #000000 100%);
   border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
@@ -68,6 +70,7 @@ header {
   justify-self: start;
 }
 header h1 {
+  font-family: var(--font);
   font-size: 36px;
   font-weight: 600;
   letter-spacing: -0.5px;
@@ -85,11 +88,19 @@ header h1 {
   align-items: center;
   justify-content: center;
 }
+
 .title-gif {
   width: 56px;
   height: 56px;
   object-fit: cover;
   object-position: center 32%;
+  animation: troll-wobble 2.8s ease-in-out infinite;
+}
+@keyframes troll-wobble {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-5deg) scale(1.04); }
+  50% { transform: rotate(4deg) scale(1.08); }
+  75% { transform: rotate(-2deg) scale(1.03); }
 }
 .header-links {
   justify-self: center;
@@ -160,7 +171,7 @@ header h1 {
 .header-link-btn {
   border: 0.5px solid rgba(255,255,255,0.25);
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -218,6 +229,34 @@ header p {
   margin-top: 4px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+
+.header-runner-track {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 54px;
+  overflow: hidden;
+  z-index: 2;
+}
+.header-runner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  animation: runner-slide 14s linear infinite;
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+  filter: contrast(1.2) saturate(0.85);
+}
+@keyframes runner-slide {
+  0% { transform: translateX(-68px); }
+  100% { transform: translateX(calc(100vw + 68px)); }
 }
 
 /* ── BIOGRAPHY ── */
@@ -2445,9 +2484,9 @@ footer a:hover { color: #fff; }
     </div>
     <nav class="header-links" aria-label="Top navigation">
       <div class="header-links-row">
-        <a class="header-link-btn" href="/status.html/">Projects</a>
         <a class="header-link-btn" href="https://blog.trollrunner.net">Blogs</a>
         <a class="header-link-btn" href="https://finance.trollrunner.net">Finances</a>
+        <a class="header-link-btn" href="https://projects.trollrunner.net/">Projects</a>
       </div>
       <div class="header-live-stack" aria-live="polite">
         <div id="live-status-running-pill" class="header-live-pill header-live-pill--running">
@@ -2468,6 +2507,9 @@ footer a:hover { color: #fff; }
         <span id="spotify-status" class="header-song-text">Loading music…</span>
       </div>
     </div>
+  </div>
+  <div class="header-runner-track" aria-hidden="true">
+    <img class="header-runner" src="assets/animations/troll-lel.gif" alt="">
   </div>
 </header>
 
