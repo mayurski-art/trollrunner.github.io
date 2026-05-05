@@ -56,6 +56,8 @@ html, body {
 
 /* ── HEADER ── */
 header {
+  position: relative;
+  overflow: hidden;
   padding: 28px 20px 18px;
   background: linear-gradient(145deg, rgba(37,24,86,0.96) 0%, rgba(72,31,130,0.94) 32%, rgba(25,88,156,0.90) 68%, rgba(9,16,34,0.96) 100%);
   border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
@@ -94,7 +96,6 @@ header h1 {
   height: 56px;
   object-fit: cover;
   object-position: center 32%;
-  filter: saturate(1.3) contrast(1.08);
   animation: troll-wobble 2.8s ease-in-out infinite;
 }
 @keyframes troll-wobble {
@@ -232,6 +233,32 @@ header p {
   margin-top: 4px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+
+.header-runner-track {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -8px;
+  height: 54px;
+  overflow: hidden;
+  z-index: 2;
+}
+.header-runner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  animation: runner-slide 14s linear infinite;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+}
+@keyframes runner-slide {
+  0% { transform: translateX(-68px); }
+  100% { transform: translateX(calc(100vw + 68px)); }
 }
 
 /* ── BIOGRAPHY ── */
@@ -2482,6 +2509,9 @@ footer a:hover { color: #fff; }
         <span id="spotify-status" class="header-song-text">Loading music…</span>
       </div>
     </div>
+  </div>
+  <div class="header-runner-track" aria-hidden="true">
+    <img class="header-runner" src="assets/animations/troll-lel.gif" alt="">
   </div>
 </header>
 
