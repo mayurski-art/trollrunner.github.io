@@ -82,6 +82,11 @@ header h1 {
   align-items: center;
   gap: 10px;
 }
+.found-style-title {
+  font-family: var(--font);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
 .title-gif-mask {
   width: 42px;
   height: 42px;
@@ -2484,7 +2489,7 @@ footer a:hover { color: #fff; }
 <header>
   <div class="header-row">
     <div class="header-brand">
-      <h1><img class="title-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation">Troll Runner</h1>
+      <h1 class="found-style-title"><img class="title-gif" src="https://media.tenor.com/kkkBm71bkRcAAAAi/trollface-troll-face-terror-png.gif" alt="Troll face animation">Troll Runner</h1>
     </div>
     <nav class="header-links" aria-label="Top navigation">
       <div class="header-links-row">
@@ -2560,13 +2565,13 @@ footer a:hover { color: #fff; }
 
 <div id="stats-banner">
   <div class="stats-banner-head">
-    <strong>Statistics</strong>
+    <strong class="found-style-title">Statistics</strong>
   </div>
   <div class="stats-grid">
-    <div class="stat-card"><div class="val" id="stats-total-stickers">0</div><div class="lbl">Stickers</div></div>
-    <div class="stat-card"><div class="val">156</div><div class="lbl">Miles Ran</div></div>
-    <div class="stat-card"><div class="val" id="stats-total-locations">0</div><div class="lbl">Spots</div></div>
-    <div class="stat-card"><div class="val" id="stats-total-cities">0</div><div class="lbl">Cities</div></div>
+    <div class="stat-card"><div class="val found-style-title" id="stats-total-stickers">0</div><div class="lbl found-style-title">Stickers</div></div>
+    <div class="stat-card"><div class="val found-style-title">156</div><div class="lbl found-style-title">Miles Ran</div></div>
+    <div class="stat-card"><div class="val found-style-title" id="stats-total-locations">0</div><div class="lbl found-style-title">Spots</div></div>
+    <div class="stat-card"><div class="val found-style-title" id="stats-total-cities">0</div><div class="lbl found-style-title">Cities</div></div>
   </div>
 </div>
 </div>
@@ -2574,7 +2579,7 @@ footer a:hover { color: #fff; }
 <section id="map-section">
   <div class="map-section-head">
     <div>
-      <h2>Sticker Map</h2>
+      <h2 class="found-style-title">Sticker Map</h2>
     </div>
   </div>
   <div id="map-app">
@@ -2583,7 +2588,7 @@ footer a:hover { color: #fff; }
     <div id="sidebar">
       <div id="sidebar-header">
         <div id="sidebar-title-row">
-          <h3>Troll sticker tracker</h3>
+          <h3 class="found-style-title">Troll sticker tracker</h3>
         </div>
         <button id="tracker-toggle" type="button" aria-expanded="false" aria-controls="tracker-panel" onclick="toggleSidebarTracker()">
           Turn on Troll Sticker Tracker
@@ -2689,7 +2694,7 @@ footer a:hover { color: #fff; }
 <div class="found-sticker-row">
   <div class="found-sticker-spacer" aria-hidden="true"></div>
   <section id="found-sticker">
-    <h2>Found a sticker?</h2>
+    <h2 class="found-style-title">Found a sticker?</h2>
     <div class="update-card found-sticker-card">
       <div class="found-sticker-art" aria-hidden="true">
         <img src="assets/images/troll-arm.png" alt="">
