@@ -71,6 +71,7 @@ header {
   justify-self: start;
 }
 header h1 {
+  font-family: var(--font);
   font-size: 36px;
   font-weight: 600;
   letter-spacing: -0.5px;
@@ -254,7 +255,9 @@ header p {
   height: 52px;
   object-fit: contain;
   animation: runner-slide 14s linear infinite;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+  filter: contrast(1.2) saturate(0.85);
 }
 @keyframes runner-slide {
   0% { transform: translateX(-68px); }
