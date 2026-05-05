@@ -85,11 +85,19 @@ header h1 {
   align-items: center;
   justify-content: center;
 }
+
 .title-gif {
   width: 56px;
   height: 56px;
   object-fit: cover;
   object-position: center 32%;
+  animation: troll-wobble 2.8s ease-in-out infinite;
+}
+@keyframes troll-wobble {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-5deg) scale(1.04); }
+  50% { transform: rotate(4deg) scale(1.08); }
+  75% { transform: rotate(-2deg) scale(1.03); }
 }
 .header-links {
   justify-self: center;
@@ -160,7 +168,7 @@ header h1 {
 .header-link-btn {
   border: 0.5px solid rgba(255,255,255,0.25);
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -2445,9 +2453,9 @@ footer a:hover { color: #fff; }
     </div>
     <nav class="header-links" aria-label="Top navigation">
       <div class="header-links-row">
-        <a class="header-link-btn" href="/status.html/">Projects</a>
         <a class="header-link-btn" href="https://blog.trollrunner.net">Blogs</a>
         <a class="header-link-btn" href="https://finance.trollrunner.net">Finances</a>
+        <a class="header-link-btn" href="https://projects.trollrunner.net/">Projects</a>
       </div>
       <div class="header-live-stack" aria-live="polite">
         <div id="live-status-running-pill" class="header-live-pill header-live-pill--running">
