@@ -12,7 +12,6 @@
   const redirects = {
     'blog.trollrunner.net': '/blog.html',
     'finance.trollrunner.net': '/finance.html',
-    'projects.trollrunner.net': '/projects.html',
   };
   const targetPath = redirects[host];
   if (targetPath && (path === '/' || path === '/index.html')) {
@@ -1676,6 +1675,24 @@ header p {
   color: #4a4a4a;                  /* readable gray for description */
   white-space: pre-line;
 }
+.formatted-update-body p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4a4a4a;
+  margin: 10px 0 0;
+}
+.formatted-update-body p:first-child {
+  margin-top: 0;
+}
+.formatted-update-body ul,
+.formatted-update-body ol {
+  margin: 10px 0 0 20px;
+  padding: 0;
+  color: #4a4a4a;
+}
+.formatted-update-body li + li {
+  margin-top: 6px;
+}
 
 .found-sticker-card {
   position: relative;
@@ -2430,7 +2447,6 @@ footer a:hover { color: #fff; }
       <div class="header-links-row">
         <a class="header-link-btn" href="https://blog.trollrunner.net">Blogs</a>
         <a class="header-link-btn" href="https://finance.trollrunner.net">Finances</a>
-        <a class="header-link-btn" href="https://projects.trollrunner.net">Projects</a>
       </div>
       <div class="header-live-stack" aria-live="polite">
         <div id="live-status-running-pill" class="header-live-pill header-live-pill--running">
@@ -3465,6 +3481,7 @@ async function updatePhotoPanel(loc) {
   const requestId = ++photoRequestId;
   const imageUrls = await resolveImageUrls(loc);
   if (requestId !== photoRequestId) return;
+  gallery.scrollTop = 0;
   if (loc && imageUrls.length) {
     app.classList.add('show-photo');
     gallery.innerHTML = '';
@@ -3585,6 +3602,65 @@ function normalizeUpdate(update) {
     createdAt: Number.isFinite(stamp) && stamp > 0 ? stamp : 0,
     archived: Boolean(update?.archived),
   };
+}
+
+function escapeUpdateHtml(str) {
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+function formatUpdateBody(body) {
+  const lines = String(body || '').split(/\r?\n/);
+  const blocks = [];
+  let current = null;
+
+  function closeCurrent() {
+    if (!current) return;
+    if (current.type === 'paragraph' && current.lines.length) {
+      blocks.push(`<p>${current.lines.map(escapeUpdateHtml).join('<br>')}</p>`);
+    }
+    if ((current.type === 'ul' || current.type === 'ol') && current.items.length) {
+      const items = current.items.map(item => `<li>${escapeUpdateHtml(item)}</li>`).join('');
+      blocks.push(`<${current.type}>${items}</${current.type}>`);
+    }
+    current = null;
+  }
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      closeCurrent();
+      return;
+    }
+
+    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+    if (orderedMatch) {
+      if (!current || current.type !== 'ol') {
+        closeCurrent();
+        current = { type: 'ol', items: [] };
+      }
+      current.items.push(orderedMatch[1]);
+      return;
+    }
+
+    const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+    if (unorderedMatch) {
+      if (!current || current.type !== 'ul') {
+        closeCurrent();
+        current = { type: 'ul', items: [] };
+      }
+      current.items.push(unorderedMatch[1]);
+      return;
+    }
+
+    if (!current || current.type !== 'paragraph') {
+      closeCurrent();
+      current = { type: 'paragraph', lines: [] };
+    }
+    current.lines.push(trimmed);
+  });
+
+  closeCurrent();
+  return `<div class="formatted-update-body">${blocks.join('')}</div>`;
 }
 
 function readCookieValue(name) {
@@ -3768,7 +3844,7 @@ async function loadCustomUpdates(sharedStateOverride = null) {
   visible.forEach(u => {
     const card = document.createElement('div');
     card.className = 'update-card';
-    card.innerHTML = `<h3>${u.title}</h3><p>${u.body}</p>`;
+    card.innerHTML = `<h3>${escapeUpdateHtml(u.title)}</h3>${formatUpdateBody(u.body)}`;
     wrap.appendChild(card);
   });
 }

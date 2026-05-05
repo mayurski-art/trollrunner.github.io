@@ -58,6 +58,20 @@
       padding: 10px;
       margin-top: 8px;
     }
+    .formatted-update-body p {
+      margin: 10px 0 0;
+    }
+    .formatted-update-body p:first-child {
+      margin-top: 0;
+    }
+    .formatted-update-body ul,
+    .formatted-update-body ol {
+      margin: 10px 0 0 20px;
+      padding: 0;
+    }
+    .formatted-update-body li + li {
+      margin-top: 6px;
+    }
     a { color: #66aaff; }
   </style>
 </head>
@@ -74,9 +88,11 @@
       <div style="height:10px"></div>
       <label for="u-body">Update body</label>
       <textarea id="u-body" placeholder="Placed stickers at..."></textarea>
+      <p>Use `- item` for bullets or `1. item` for numbered lists.</p>
 
       <div class="row">
-        <button onclick="addUpdate()">Add update</button>
+        <button id="update-submit-btn" onclick="addUpdate()">Add update</button>
+        <button id="update-cancel-btn" class="secondary" onclick="cancelUpdateEdit()" style="display:none;">Cancel edit</button>
         <button class="secondary" onclick="clearUpdates()">Clear all custom updates</button>
       </div>
     </div>
@@ -88,7 +104,7 @@
 
     <div class="card preview">
       <h3>Live status popup controls</h3>
-      <p>Toggle the homepage live popups shown below the Blog / Nutrition / Finance / Projects buttons.</p>
+      <p>Toggle the homepage live popups shown below the Blog / Nutrition / Finance buttons.</p>
       <p id="live-status-running-state">Running/trolling live popup is currently off.</p>
       <p id="sync-state">Shared sync status will appear here.</p>
       <div class="row">
@@ -129,6 +145,7 @@
     const SUPABASE_TABLE = 'site_updates';
     const SUPABASE_ROW_ID = 'main';
     const LIVE_STATUS_SYNC_POLL_MS = 10000;
+    let editingUpdateId = null;
     const DEFAULT_UPDATES = [
   {
     title: 'April 21, 2026',
@@ -170,8 +187,90 @@
       return str.replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
     }
 
+    function formatUpdateBody(body) {
+      const lines = String(body || '').split(/\r?\n/);
+      const blocks = [];
+      let current = null;
+
+      function closeCurrent() {
+        if (!current) return;
+        if (current.type === 'paragraph' && current.lines.length) {
+          blocks.push(`<p>${current.lines.map(escapeHtml).join('<br>')}</p>`);
+        }
+        if ((current.type === 'ul' || current.type === 'ol') && current.items.length) {
+          const items = current.items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+          blocks.push(`<${current.type}>${items}</${current.type}>`);
+        }
+        current = null;
+      }
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          closeCurrent();
+          return;
+        }
+
+        const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+        if (orderedMatch) {
+          if (!current || current.type !== 'ol') {
+            closeCurrent();
+            current = { type: 'ol', items: [] };
+          }
+          current.items.push(orderedMatch[1]);
+          return;
+        }
+
+        const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+        if (unorderedMatch) {
+          if (!current || current.type !== 'ul') {
+            closeCurrent();
+            current = { type: 'ul', items: [] };
+          }
+          current.items.push(unorderedMatch[1]);
+          return;
+        }
+
+        if (!current || current.type !== 'paragraph') {
+          closeCurrent();
+          current = { type: 'paragraph', lines: [] };
+        }
+        current.lines.push(trimmed);
+      });
+
+      closeCurrent();
+      return `<div class="formatted-update-body">${blocks.join('')}</div>`;
+    }
+
     function createUpdateId() {
       return `update-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function resetUpdateForm() {
+      editingUpdateId = null;
+      document.getElementById('u-title').value = '';
+      document.getElementById('u-body').value = '';
+      document.getElementById('update-submit-btn').textContent = 'Add update';
+      document.getElementById('update-cancel-btn').style.display = 'none';
+    }
+
+    function startUpdateEdit(id) {
+      const updates = ensureSeededUpdates();
+      const current = updates
+        .map(item => normalizeUpdate(item, item?.source || 'custom'))
+        .find(item => item && String(item.id) === String(id));
+      if (!current) return;
+      editingUpdateId = current.id;
+      document.getElementById('u-title').value = current.title;
+      document.getElementById('u-body').value = current.body;
+      document.getElementById('update-submit-btn').textContent = 'Save update';
+      document.getElementById('update-cancel-btn').style.display = 'inline-block';
+      document.getElementById('u-title').focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelUpdateEdit() {
+      resetUpdateForm();
     }
 
     function setCookieValue(name, value) {
@@ -534,9 +633,9 @@
         return `<div class="item">
           <strong>${escapeHtml(u.title)}</strong><br>
           <small>${escapeHtml(created)} · ${escapeHtml(origin)}</small>
-          <p>${escapeHtml(u.body)}</p>
+          ${formatUpdateBody(u.body)}
           <div class="row">
-            <button class="secondary" onclick="editUpdate('${escapeHtml(u.id)}')">Edit</button>
+            <button class="secondary" onclick="startUpdateEdit('${escapeHtml(u.id)}')">Edit</button>
             <button class="secondary" onclick="toggleArchiveUpdate('${escapeHtml(u.id)}')">${u.archived ? 'Unarchive' : 'Archive'}</button>
             <button class="danger" onclick="deleteUpdate('${escapeHtml(u.id)}')">Delete</button>
           </div>
@@ -586,41 +685,24 @@
         return;
       }
       const updates = ensureSeededUpdates();
-      updates.unshift({ id: createUpdateId(), title, body, createdAt: new Date().toISOString(), archived: false, source: 'custom' });
+      if (editingUpdateId) {
+        const idx = updates.findIndex(item => String(item.id) === String(editingUpdateId));
+        if (idx >= 0) {
+          updates[idx] = { ...updates[idx], title, body };
+        } else {
+          updates.unshift({ id: createUpdateId(), title, body, createdAt: new Date().toISOString(), archived: false, source: 'custom' });
+        }
+      } else {
+        updates.unshift({ id: createUpdateId(), title, body, createdAt: new Date().toISOString(), archived: false, source: 'custom' });
+      }
       const nextUpdates = enforceActiveLimit(updates);
       setUpdates(nextUpdates, { skipPush: true });
-      document.getElementById('u-title').value = '';
-      document.getElementById('u-body').value = '';
+      resetUpdateForm();
       renderUpdates();
       const synced = await syncUpdatesToBackend(nextUpdates);
       alert(synced
         ? 'Update saved and shared across devices.'
         : `Update saved on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
-    }
-
-    async function editUpdate(id) {
-      const updates = ensureSeededUpdates();
-      const idx = updates.findIndex(item => String(item.id) === String(id));
-      if (idx < 0) return;
-      const current = normalizeUpdate(updates[idx], updates[idx]?.source || 'custom');
-      if (!current) return;
-      const nextTitle = prompt('Edit update title:', current.title);
-      if (nextTitle === null) return;
-      const nextBody = prompt('Edit update body:', current.body);
-      if (nextBody === null) return;
-      const title = nextTitle.trim();
-      const body = nextBody.trim();
-      if (!title || !body) {
-        alert('Both title and body are required.');
-        return;
-      }
-      updates[idx] = { ...updates[idx], title, body };
-      setUpdates(updates, { skipPush: true });
-      renderUpdates();
-      const synced = await syncUpdatesToBackend(updates);
-      if (!synced) {
-        alert(`Edit saved on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
-      }
     }
 
     async function toggleArchiveUpdate(id) {
@@ -644,6 +726,7 @@
       const current = normalizeUpdate(updates[idx], updates[idx]?.source || 'custom');
       if (!current) return;
       if (!confirm(`Delete "${current.title}" permanently?`)) return;
+      if (String(editingUpdateId) === String(id)) resetUpdateForm();
       const nextUpdates = updates.filter(item => String(item.id) !== String(id));
       setUpdates(nextUpdates, { skipPush: true });
       renderUpdates();
@@ -656,6 +739,7 @@
     async function clearUpdates() {
       if (!confirm('Clear all custom updates?')) return;
       const base = DEFAULT_UPDATES.map(item => normalizeUpdate({ ...item, id: createUpdateId(), archived: false }, 'site-default')).filter(Boolean);
+      resetUpdateForm();
       setUpdates(base, { skipPush: true });
       renderUpdates();
       const synced = await syncUpdatesToBackend(base);
