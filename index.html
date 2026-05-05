@@ -21,7 +21,7 @@
 </script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&family=Space+Grotesk:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&family=Rubik+Glitch&family=Space+Grotesk:wght@500;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -41,7 +41,8 @@
   --chino:     #007aff; --chino-bg:    #e5f2ff; --chino-txt:    #004a99;
   --font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'DM Mono', monospace;
-  --font-display: 'Space Grotesk', 'DM Sans', sans-serif;
+  --font-display: 'Rubik Glitch', 'Space Grotesk', 'DM Sans', sans-serif;
+  --bg-shell: radial-gradient(circle at 15% 5%, #2c2065 0%, #111126 45%, #050507 100%);
   --cursor-admin: url('https://www.rw-designer.com/cursor-extern.php?id=39757'), auto;
   --cursor-search: url('https://www.rw-designer.com/cursor-extern.php?id=39756'), auto;
 }
@@ -49,14 +50,14 @@
 html, body {
   min-height: 100%;
   font-family: var(--font);
-  background: #1c1c1e;
+  background: var(--bg-shell);
   color: white;
 }
 
 /* ── HEADER ── */
 header {
   padding: 28px 20px 18px;
-  background: linear-gradient(178deg, #14143a 0%, #21439f 50%, #000000 100%);
+  background: linear-gradient(145deg, rgba(37,24,86,0.96) 0%, rgba(72,31,130,0.94) 32%, rgba(25,88,156,0.90) 68%, rgba(9,16,34,0.96) 100%);
   border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
 }
 .header-row {
@@ -72,6 +73,8 @@ header h1 {
   font-weight: 600;
   letter-spacing: -0.5px;
   color: #fff;
+  font-family: var(--font-display);
+  text-shadow: 0 0 14px rgba(173, 87, 255, 0.38);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -85,11 +88,20 @@ header h1 {
   align-items: center;
   justify-content: center;
 }
+
 .title-gif {
   width: 56px;
   height: 56px;
   object-fit: cover;
   object-position: center 32%;
+  filter: saturate(1.3) contrast(1.08);
+  animation: troll-wobble 2.8s ease-in-out infinite;
+}
+@keyframes troll-wobble {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-5deg) scale(1.04); }
+  50% { transform: rotate(4deg) scale(1.08); }
+  75% { transform: rotate(-2deg) scale(1.03); }
 }
 .header-links {
   justify-self: center;
@@ -160,18 +172,20 @@ header h1 {
 .header-link-btn {
   border: 0.5px solid rgba(255,255,255,0.25);
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
   color: #fff;
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
   letter-spacing: 0.2px;
   padding: 8px 14px;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.22);
+  transition: background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
 }
 .header-link-btn:hover {
-  background: rgba(255,255,255,0.16);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(255,255,255,0.24), rgba(115,225,255,0.18));
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.28);
 }
 .header-spacer {
   justify-self: end;
