@@ -2409,8 +2409,8 @@ footer a:hover { color: #fff; }
     transform: translateY(18%);
   }
   .found-sticker-card {
-    min-height: 310px;
-    padding: 14px;
+    min-height: 280px;
+    padding: 12px;
     align-items: stretch;
   }
   .found-sticker-copy {
@@ -2421,15 +2421,15 @@ footer a:hover { color: #fff; }
     text-align: right;
   }
   .found-sticker-art {
-    inset: -6% -8% -8% -8%;
+    inset: 2% 2% 2% 2%;
   }
   .found-sticker-art img {
-    object-position: center 52%;
-    opacity: 0.78;
-    transform: scale(1.06);
+    object-position: center center;
+    opacity: 0.74;
+    transform: scale(0.9);
   }
   .sticker-collage {
-    inset: 10% 8% 18% 8%;
+    inset: 14% 12% 24% 12%;
   }
   .map-section-sub {
     font-size: 12px;
@@ -2710,7 +2710,10 @@ footer a:hover { color: #fff; }
     <h2 class="found-style-title">Found a sticker?</h2>
     <div class="update-card found-sticker-card">
       <div class="found-sticker-art" aria-hidden="true">
-        <img src="assets/images/troll-blackhole.png" alt="" onerror="this.onerror=null;this.src='assets/images/troll-arm.png';">
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/images/troll-blackhole.png">
+          <img src="assets/images/troll-arm.png" alt="" onerror="this.onerror=null;this.src='assets/images/troll-arm.png';">
+        </picture>
       </div>
       <div id="sticker-collage" class="sticker-collage" aria-hidden="true"></div>
       <div class="found-sticker-copy">
@@ -3996,10 +3999,19 @@ function getStickerCollageImages() {
   });
 }
 
+const STICKER_HAND_SLOTS = [
+  { x: '67%', y: '62%', size: '11%', rotate: '-10deg', scale: '0.96' },
+  { x: '74%', y: '45%', size: '12%', rotate: '8deg', scale: '1' },
+  { x: '81%', y: '31%', size: '13%', rotate: '-7deg', scale: '1.06' },
+  { x: '88%', y: '18%', size: '10.5%', rotate: '10deg', scale: '0.94' },
+  { x: '92%', y: '40%', size: '10.5%', rotate: '-6deg', scale: '1' },
+  { x: '85%', y: '58%', size: '11.5%', rotate: '6deg', scale: '1.04' }
+];
 const STICKER_RING_COUNT = 8;
 const STICKER_REVEAL_INTERVAL_MS = 260;
 const STICKER_RING_HOLD_MS = 900;
 const STICKER_CENTER_HOLD_MS = 700;
+const STICKER_FULL_ROW_HOLD_MS = 1400;
 const STICKER_CLEAR_MS = 260;
 const STICKER_RESET_GAP_MS = 200;
 let stickerCollageTimers = [];
@@ -4055,13 +4067,14 @@ function renderStickerCollage() {
   collage.innerHTML = '';
   if (!images.length) return;
 
-  const ringCount = Math.min(images.length, STICKER_RING_COUNT);
+  const isIphoneLayout = () => window.matchMedia('(max-width: 640px)').matches;
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const buildCycleTiles = () => {
+  const buildPhoneCycleTiles = () => {
     collage.classList.remove('is-clearing');
     collage.innerHTML = '';
 
+    const ringCount = Math.min(images.length, STICKER_RING_COUNT);
     const cycleImages = shuffleArray(images);
     const ringImages = cycleImages.slice(0, ringCount);
     const centerImage = cycleImages[ringCount] || cycleImages[0];
@@ -4110,25 +4123,68 @@ function renderStickerCollage() {
     return { ringTiles, centerTile };
   };
 
-  const runCycle = () => {
-    const { ringTiles, centerTile } = buildCycleTiles();
-    if (!ringTiles.length || !centerTile) return;
+  const buildDesktopCycleTiles = () => {
+    collage.classList.remove('is-clearing');
+    collage.innerHTML = '';
 
-    if (prefersReducedMotion) {
-      ringTiles.forEach(tile => tile.classList.add('is-visible'));
-      centerTile.classList.add('is-visible');
+    const visibleCount = Math.min(images.length, STICKER_HAND_SLOTS.length);
+    const cycleImages = shuffleArray(images).slice(0, visibleCount);
+    return cycleImages.map((image, idx) => {
+      const slot = STICKER_HAND_SLOTS[idx];
+      const tile = document.createElement('figure');
+      tile.className = 'sticker-collage-item';
+      tile.style.setProperty('--sticker-x', slot.x);
+      tile.style.setProperty('--sticker-y', slot.y);
+      tile.style.setProperty('--sticker-size', slot.size);
+      tile.style.setProperty('--sticker-rotate', slot.rotate);
+      tile.style.setProperty('--sticker-scale', slot.scale);
+      tile.setAttribute('title', image.title);
+
+      const img = document.createElement('img');
+      img.src = image.src;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+
+      tile.appendChild(img);
+      collage.appendChild(tile);
+      return tile;
+    });
+  };
+
+  const runCycle = () => {
+    if (isIphoneLayout()) {
+      const { ringTiles, centerTile } = buildPhoneCycleTiles();
+      if (!ringTiles.length || !centerTile) return;
+      if (prefersReducedMotion) {
+        ringTiles.forEach(tile => tile.classList.add('is-visible'));
+        centerTile.classList.add('is-visible');
+        return;
+      }
+      ringTiles.forEach((tile, idx) => {
+        queueStickerCollageTimer(() => tile.classList.add('is-visible'), idx * STICKER_REVEAL_INTERVAL_MS);
+      });
+      const revealCompleteMs = (ringTiles.length - 1) * STICKER_REVEAL_INTERVAL_MS;
+      const centerRevealMs = revealCompleteMs + STICKER_RING_HOLD_MS;
+      queueStickerCollageTimer(() => centerTile.classList.add('is-visible'), centerRevealMs);
+      const clearStartMs = centerRevealMs + STICKER_CENTER_HOLD_MS;
+      queueStickerCollageTimer(() => collage.classList.add('is-clearing'), clearStartMs);
+      queueStickerCollageTimer(runCycle, clearStartMs + STICKER_CLEAR_MS + STICKER_RESET_GAP_MS);
       return;
     }
 
-    ringTiles.forEach((tile, idx) => {
+    const tiles = buildDesktopCycleTiles();
+    if (!tiles.length) return;
+    if (prefersReducedMotion) {
+      tiles.forEach(tile => tile.classList.add('is-visible'));
+      return;
+    }
+
+    tiles.forEach((tile, idx) => {
       queueStickerCollageTimer(() => tile.classList.add('is-visible'), idx * STICKER_REVEAL_INTERVAL_MS);
     });
-
-    const revealCompleteMs = (ringTiles.length - 1) * STICKER_REVEAL_INTERVAL_MS;
-    const centerRevealMs = revealCompleteMs + STICKER_RING_HOLD_MS;
-    queueStickerCollageTimer(() => centerTile.classList.add('is-visible'), centerRevealMs);
-
-    const clearStartMs = centerRevealMs + STICKER_CENTER_HOLD_MS;
+    const revealCompleteMs = (tiles.length - 1) * STICKER_REVEAL_INTERVAL_MS;
+    const clearStartMs = revealCompleteMs + STICKER_FULL_ROW_HOLD_MS;
     queueStickerCollageTimer(() => collage.classList.add('is-clearing'), clearStartMs);
     queueStickerCollageTimer(runCycle, clearStartMs + STICKER_CLEAR_MS + STICKER_RESET_GAP_MS);
   };
