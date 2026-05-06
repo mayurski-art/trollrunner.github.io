@@ -2409,8 +2409,8 @@ footer a:hover { color: #fff; }
     transform: translateY(18%);
   }
   .found-sticker-card {
-    min-height: 310px;
-    padding: 14px;
+    min-height: 280px;
+    padding: 12px;
     align-items: stretch;
   }
   .found-sticker-copy {
@@ -2421,15 +2421,15 @@ footer a:hover { color: #fff; }
     text-align: right;
   }
   .found-sticker-art {
-    inset: -6% -8% -8% -8%;
+    inset: 2% 2% 2% 2%;
   }
   .found-sticker-art img {
-    object-position: center 52%;
-    opacity: 0.78;
-    transform: scale(1.06);
+    object-position: center center;
+    opacity: 0.74;
+    transform: scale(0.9);
   }
   .sticker-collage {
-    inset: 10% 8% 18% 8%;
+    inset: 14% 12% 24% 12%;
   }
   .map-section-sub {
     font-size: 12px;
@@ -2710,7 +2710,10 @@ footer a:hover { color: #fff; }
     <h2 class="found-style-title">Found a sticker?</h2>
     <div class="update-card found-sticker-card">
       <div class="found-sticker-art" aria-hidden="true">
-        <img src="assets/images/troll-blackhole.png" alt="" onerror="this.onerror=null;this.src='assets/images/troll-arm.png';">
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/images/troll-blackhole.png">
+          <img src="assets/images/troll-arm.png" alt="" onerror="this.onerror=null;this.src='assets/images/troll-arm.png';">
+        </picture>
       </div>
       <div id="sticker-collage" class="sticker-collage" aria-hidden="true"></div>
       <div class="found-sticker-copy">
