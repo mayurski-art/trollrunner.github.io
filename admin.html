@@ -428,7 +428,7 @@
       status.textContent = 'Loading shared updates from Supabase…';
       try {
         const qs = new URLSearchParams({
-          select: 'updates,live_status_enabled',
+          select: 'updates,live_status_enabled,feedback',
           id: `eq.${SUPABASE_ROW_ID}`,
           limit: '1'
         });
@@ -522,7 +522,7 @@
       const status = document.getElementById('sync-state');
       if (status) status.textContent = 'Loading shared updates from Supabase...';
       const qs = new URLSearchParams({
-        select: 'updates,live_status_enabled',
+        select: 'updates,live_status_enabled,feedback',
         id: `eq.${SUPABASE_ROW_ID}`,
         limit: '1'
       });
