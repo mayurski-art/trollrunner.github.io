@@ -3825,10 +3825,27 @@ async function parseSupabaseError(response) {
 async function syncFeedbackToBackend(items) {
   if (!isSupabaseConfigured()) return false;
   try {
+    const qs = new URLSearchParams({
+      select: 'updates,live_status_enabled',
+      id: `eq.${SUPABASE_ROW_ID}`,
+      limit: '1'
+    });
+    const existingResponse = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?${qs.toString()}`, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    });
+    if (!existingResponse.ok) return false;
+    const existingJson = await existingResponse.json();
+    const existingPayload = Array.isArray(existingJson) ? existingJson[0] : existingJson;
+    const visibleUpdates = parseSharedUpdatesPayload(existingPayload);
+    const liveStatusEnabled = parseSharedStatusFlag(existingPayload?.live_status_enabled);
+
     const payload = {
       id: SUPABASE_ROW_ID,
       updates: [
-        ...parseSharedUpdatesPayload({ updates: ensureSeededUpdates() }),
+        ...visibleUpdates,
         {
           id: SHARED_FEEDBACK_META_ID,
           title: '__feedback_meta__',
@@ -3839,6 +3856,7 @@ async function syncFeedbackToBackend(items) {
           items: Array.isArray(items) ? items : [],
         }
       ],
+      live_status_enabled: liveStatusEnabled === null ? false : liveStatusEnabled,
       updated_at: new Date().toISOString(),
     };
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
