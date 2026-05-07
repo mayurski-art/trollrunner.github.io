@@ -132,6 +132,7 @@
     const UPDATES_KEY = 'trollrunner_updates';
     const FEEDBACK_KEY = 'trollrunner_feedback';
     const SHARED_STATUS_META_ID = '__trollrunner_live_status_meta__';
+    const SHARED_FEEDBACK_META_ID = '__trollrunner_feedback_meta__';
     const LIVE_RUNNING_STATUS_KEY = 'trollrunner_live_status_running_enabled';
     const LIVE_RUNNING_STATUS_OVERRIDE_KEY = 'trollrunner_live_status_running_override';
     const LIVE_CODING_STATUS_KEY = 'trollrunner_live_status_coding_enabled';
@@ -326,8 +327,12 @@
       return Boolean(item) && typeof item === 'object' && item.id === SHARED_STATUS_META_ID;
     }
 
+    function isSharedFeedbackMetaItem(item) {
+      return Boolean(item) && typeof item === 'object' && item.id === SHARED_FEEDBACK_META_ID;
+    }
+
     function parseUpdatesPayload(payload) {
-      return getSharedUpdatesArray(payload).filter(item => !isSharedStatusMetaItem(item));
+      return getSharedUpdatesArray(payload).filter(item => !isSharedStatusMetaItem(item) && !isSharedFeedbackMetaItem(item));
     }
 
     function parseStatusFlag(value) {
@@ -367,7 +372,7 @@
     }
 
     function buildSharedUpdatesPayload(items, liveStatuses = getCurrentLiveStatuses()) {
-      const visibleItems = Array.isArray(items) ? items.filter(item => !isSharedStatusMetaItem(item)) : [];
+      const visibleItems = Array.isArray(items) ? items.filter(item => !isSharedStatusMetaItem(item) && !isSharedFeedbackMetaItem(item)) : [];
       return [
         ...visibleItems,
         {
@@ -750,7 +755,12 @@
 
 
     function parseFeedbackPayload(payload) {
-      const items = payload?.feedback;
+      if (payload && Array.isArray(payload.feedback)) {
+        return payload.feedback;
+      }
+      const rawUpdates = getSharedUpdatesArray(payload);
+      const meta = rawUpdates.find(isSharedFeedbackMetaItem);
+      const items = meta?.items;
       if (!Array.isArray(items)) return [];
       return items.filter(item => item && typeof item === 'object').map(item => ({
         message: String(item.message || '').trim(),
@@ -764,7 +774,7 @@
       if (!isSupabaseConfigured()) return null;
       try {
         const qs = new URLSearchParams({
-          select: 'feedback',
+          select: 'updates',
           id: `eq.${SUPABASE_ROW_ID}`,
           limit: '1'
         });
@@ -806,7 +816,18 @@
       try {
         const payload = {
           id: SUPABASE_ROW_ID,
-          feedback: [],
+          updates: [
+            ...buildSharedUpdatesPayload(ensureSeededUpdates()),
+            {
+              id: SHARED_FEEDBACK_META_ID,
+              title: '__feedback_meta__',
+              body: '__feedback_meta__',
+              createdAt: new Date().toISOString(),
+              archived: true,
+              source: 'system',
+              items: [],
+            }
+          ],
           updated_at: new Date().toISOString(),
         };
         await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
