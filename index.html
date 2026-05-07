@@ -2760,6 +2760,7 @@ footer a:hover { color: #fff; }
 const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
 const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
+const SHARED_FEEDBACK_META_ID = '__trollrunner_feedback_meta__';
 const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 4;
 const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
@@ -3759,8 +3760,12 @@ function isSharedStatusMetaItem(item) {
   return Boolean(item) && typeof item === 'object' && item.id === SHARED_STATUS_META_ID;
 }
 
+function isSharedFeedbackMetaItem(item) {
+  return Boolean(item) && typeof item === 'object' && item.id === SHARED_FEEDBACK_META_ID;
+}
+
 function parseSharedUpdatesPayload(payload) {
-  return getSharedUpdatesArray(payload).filter(item => !isSharedStatusMetaItem(item));
+  return getSharedUpdatesArray(payload).filter(item => !isSharedStatusMetaItem(item) && !isSharedFeedbackMetaItem(item));
 }
 
 function parseSharedStatusFlag(value) {
@@ -3814,6 +3819,41 @@ async function parseSupabaseError(response) {
     } catch {
       return prefix;
     }
+  }
+}
+
+async function syncFeedbackToBackend(items) {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    const payload = {
+      id: SUPABASE_ROW_ID,
+      updates: [
+        ...parseSharedUpdatesPayload({ updates: ensureSeededUpdates() }),
+        {
+          id: SHARED_FEEDBACK_META_ID,
+          title: '__feedback_meta__',
+          body: '__feedback_meta__',
+          createdAt: new Date().toISOString(),
+          archived: true,
+          source: 'system',
+          items: Array.isArray(items) ? items : [],
+        }
+      ],
+      updated_at: new Date().toISOString(),
+    };
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify([payload]),
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -3970,6 +4010,12 @@ function submitFeedback() {
 
   input.value = '';
   status.textContent = `Feedback sent to admin system (${ai.topic}, ${ai.priority} priority).`;
+
+  syncFeedbackToBackend(items).then(synced => {
+    if (!synced) {
+      status.textContent += ' Saved on this device only (shared sync failed).';
+    }
+  });
 }
 
 function getStickerCollageImages() {
