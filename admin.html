@@ -423,7 +423,7 @@
       status.textContent = 'Loading shared updates from Supabase…';
       try {
         const qs = new URLSearchParams({
-          select: 'updates,live_status_enabled',
+          select: 'updates,live_status_enabled,feedback',
           id: `eq.${SUPABASE_ROW_ID}`,
           limit: '1'
         });
@@ -517,7 +517,7 @@
       const status = document.getElementById('sync-state');
       if (status) status.textContent = 'Loading shared updates from Supabase...';
       const qs = new URLSearchParams({
-        select: 'updates,live_status_enabled',
+        select: 'updates,live_status_enabled,feedback',
         id: `eq.${SUPABASE_ROW_ID}`,
         limit: '1'
       });
@@ -749,6 +749,35 @@
     }
 
 
+    function parseFeedbackPayload(payload) {
+      const items = payload?.feedback;
+      if (!Array.isArray(items)) return [];
+      return items.filter(item => item && typeof item === 'object').map(item => ({
+        message: String(item.message || '').trim(),
+        aiTopic: String(item.aiTopic || 'general').trim(),
+        aiPriority: String(item.aiPriority || 'normal').trim(),
+        createdAt: item.createdAt || null,
+      })).filter(item => item.message);
+    }
+
+    async function loadFeedbackFromBackend() {
+      if (!isSupabaseConfigured()) return null;
+      try {
+        const qs = new URLSearchParams({
+          select: 'feedback',
+          id: `eq.${SUPABASE_ROW_ID}`,
+          limit: '1'
+        });
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}?${qs.toString()}`, { headers: supabaseHeaders() });
+        if (!response.ok) return null;
+        const json = await response.json();
+        const payload = Array.isArray(json) ? json[0] : json;
+        return parseFeedbackPayload(payload);
+      } catch {
+        return null;
+      }
+    }
+
     function getFeedback() {
       try {
         const items = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || '[]');
@@ -769,10 +798,23 @@
         : '<p>No feedback submissions yet.</p>';
     }
 
-    function clearFeedback() {
+    async function clearFeedback() {
       if (!confirm('Clear all feedback submissions?')) return;
       localStorage.setItem(FEEDBACK_KEY, '[]');
       renderFeedback();
+      if (!isSupabaseConfigured()) return;
+      try {
+        const payload = {
+          id: SUPABASE_ROW_ID,
+          feedback: [],
+          updated_at: new Date().toISOString(),
+        };
+        await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+          method: 'POST',
+          headers: { ...supabaseHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify([payload]),
+        });
+      } catch {}
     }
 
     function renderLiveStatusState() {
@@ -828,6 +870,10 @@
         if (status) status.textContent = 'Shared sync is disabled. Replace SUPABASE_ANON_KEY placeholder with your real Supabase anon key to enable cross-device updates.';
       }
       renderUpdates();
+      const remoteFeedback = await loadFeedbackFromBackend();
+      if (Array.isArray(remoteFeedback)) {
+        localStorage.setItem(FEEDBACK_KEY, JSON.stringify(remoteFeedback));
+      }
       renderFeedback();
       renderLiveStatusState();
 
