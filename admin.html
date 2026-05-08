@@ -371,6 +371,15 @@
       };
     }
 
+    function getFeedbackItemsForSync() {
+      return getFeedback().filter(item => item && typeof item === 'object' && String(item.message || '').trim()).map(item => ({
+        message: String(item.message || '').trim(),
+        aiTopic: String(item.aiTopic || 'general').trim(),
+        aiPriority: String(item.aiPriority || 'normal').trim(),
+        createdAt: item.createdAt || new Date().toISOString(),
+      }));
+    }
+
     function buildSharedUpdatesPayload(items, liveStatuses = getCurrentLiveStatuses()) {
       const visibleItems = Array.isArray(items) ? items.filter(item => !isSharedStatusMetaItem(item) && !isSharedFeedbackMetaItem(item)) : [];
       return [
@@ -386,6 +395,15 @@
             running: Boolean(liveStatuses.running),
             coding: Boolean(liveStatuses.coding),
           },
+        },
+        {
+          id: SHARED_FEEDBACK_META_ID,
+          title: '__feedback_meta__',
+          body: '__feedback_meta__',
+          createdAt: new Date().toISOString(),
+          archived: true,
+          source: 'system',
+          items: getFeedbackItemsForSync(),
         },
       ];
     }
@@ -816,18 +834,7 @@
       try {
         const payload = {
           id: SUPABASE_ROW_ID,
-          updates: [
-            ...buildSharedUpdatesPayload(ensureSeededUpdates()),
-            {
-              id: SHARED_FEEDBACK_META_ID,
-              title: '__feedback_meta__',
-              body: '__feedback_meta__',
-              createdAt: new Date().toISOString(),
-              archived: true,
-              source: 'system',
-              items: [],
-            }
-          ],
+          updates: buildSharedUpdatesPayload(ensureSeededUpdates()),
           updated_at: new Date().toISOString(),
         };
         await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
