@@ -273,9 +273,13 @@ header p {
   margin: 0 auto;
   padding: 18px 24px 0;
   display: grid;
-  grid-template-columns: minmax(260px, 400px) minmax(320px, 420px);
+  grid-template-columns: minmax(260px, 390px) minmax(360px, 500px);
   gap: 28px;
   align-items: start;
+}
+#bio-artwork {
+  grid-column: 1;
+  grid-row: 1 / span 2;
 }
 #bio-artwork {
   max-width: none;
@@ -377,6 +381,8 @@ header p {
   position: relative;
   isolation: isolate;
   display: block;
+  grid-column: 2;
+  grid-row: 1;
   padding: 16px;
   margin: 4px;
   border: 1px solid rgba(255,255,255,0.12);
@@ -1652,13 +1658,12 @@ header p {
 }
 
 .found-sticker-row {
-  max-width: 1180px;
-  margin: 0 auto 40px;
-  padding: 0 24px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
+  grid-column: 2;
+  grid-row: 2;
+  max-width: none;
+  margin: 0 4px 0;
+  padding: 0;
+  display: block;
 }
 
 .found-sticker-row .found-sticker-spacer {
@@ -1666,7 +1671,6 @@ header p {
 }
 
 .found-sticker-row #found-sticker {
-  grid-column: 1;
   max-width: none;
   margin: 0;
   padding: 0;
@@ -1746,7 +1750,7 @@ header p {
   overflow: hidden;
   isolation: isolate;
   padding: 18px 20px;
-  min-height: 232px;
+  min-height: 220px;
   display: flex;
   align-items: flex-start;
   border: 1px solid rgba(255,255,255,0.08);
@@ -1923,6 +1927,42 @@ header p {
 .feedback-card-content p {
   max-width: 34rem;
   margin: 0 0 14px;
+}
+
+.feedback-identity {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.feedback-identity-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.32);
+  border: 1px solid rgba(255,255,255,0.64);
+  color: #1c1c1e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.feedback-identity-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.feedback-username-wrap[hidden] {
+  display: none;
+}
+
+.feedback-username-wrap .feedback-field {
+  min-height: 0;
+  padding: 12px 16px;
 }
 
 .feedback-field {
@@ -2187,18 +2227,19 @@ footer a:hover { color: #fff; }
   }
 
   .found-sticker-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .found-sticker-row .found-sticker-spacer {
-    display: none;
+    margin-top: 16px;
   }
 
   #intro-band {
     grid-template-columns: 1fr;
     gap: 18px;
     padding-top: 14px;
+  }
+  #bio-artwork,
+  #stats-banner,
+  .found-sticker-row {
+    grid-column: 1;
+    grid-row: auto;
   }
   #stats-banner {
     padding: 14px;
@@ -2587,8 +2628,27 @@ footer a:hover { color: #fff; }
     <div class="stat-card"><div class="val found-style-title" id="stats-total-cities">0</div><div class="lbl found-style-title">Cities</div></div>
   </div>
 </div>
-
-
+<div class="found-sticker-row">
+  <div class="found-sticker-spacer" aria-hidden="true"></div>
+  <section id="found-sticker">
+    <h2 class="found-style-title">Found a sticker?</h2>
+    <div class="update-card found-sticker-card">
+      <div class="found-sticker-art" aria-hidden="true">
+        <picture>
+          <source media="(max-width: 640px)" srcset="assets/images/troll-blackhole.png">
+          <img src="assets/images/troll-arm.png" alt="" onerror="this.onerror=null;this.src='assets/images/troll-arm.png';">
+        </picture>
+      </div>
+      <div id="sticker-collage" class="sticker-collage" aria-hidden="true"></div>
+      <div class="found-sticker-copy">
+        <p>
+          Share your picture on X <span class="found-sticker-hashtag">#TROLLRUNNER</span> and tag <span class="found-sticker-handle">@troll_runner</span>.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
 
 <section id="map-section">
   <div class="map-section-head">
@@ -2695,11 +2755,23 @@ footer a:hover { color: #fff; }
       </div>
       <div class="feedback-card-content">
         <p>Thank you for using this website. Feel free to tell us what you love, any potential bugs, and improvements!</p>
+        <div class="feedback-identity">
+          <label class="feedback-identity-toggle" for="feedback-allow-username">
+            <input id="feedback-allow-username" type="checkbox" onchange="toggleFeedbackUsername()">
+            <span>Allow username</span>
+          </label>
+          <div id="feedback-username-wrap" class="feedback-username-wrap" hidden>
+            <input
+              id="feedback-username"
+              class="feedback-field"
+              type="text"
+              maxlength="60"
+              placeholder="Username"
+              autocomplete="nickname"
+            >
+          </div>
+        </div>
         <textarea id="feedback-text" class="feedback-field" placeholder="Keyboard troll here..."></textarea>
-        <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;opacity:0.9;">
-          <input type="checkbox" id="feedback-allow-username" onchange="toggleFeedbackUsernameInput()"> Allow username
-        </label>
-        <input id="feedback-username" class="feedback-field" style="display:none;margin-top:6px;" maxlength="40" placeholder="Username (optional)">
         <div class="feedback-actions">
           <button class="feedback-btn" onclick="submitFeedback()">Submit feedback</button>
           <span id="feedback-status" class="feedback-status"></span>
@@ -2728,12 +2800,7 @@ footer a:hover { color: #fff; }
       </div>
     </div>
   </section>
-
-
-
-
 </div>
-
 <footer>
   <div class="footer-inner">
     <div class="footer-left">
@@ -2770,13 +2837,15 @@ const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
 const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
 const SHARED_FEEDBACK_META_ID = '__trollrunner_feedback_meta__';
-const GOOGLE_SHEETS_WEBHOOK_URL = '';
+const FEEDBACK_USERNAME_KEY = 'trollrunner_feedback_username';
+const FEEDBACK_ALLOW_USERNAME_KEY = 'trollrunner_feedback_allow_username';
 const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 3;
 const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
 const SUPABASE_ANON_KEY_PLACEHOLDER = 'your_anon_public_key';
 const SUPABASE_TABLE = 'site_updates';
+const FEEDBACK_SHEET_WEBHOOK_URL = '';
 const SEEDED_FEEDBACK_ENTRIES = [
   {
     username: '',
@@ -2788,6 +2857,7 @@ const SEEDED_FEEDBACK_ENTRIES = [
 ];
 const SUPABASE_ROW_ID = 'main';
 const SUPABASE_SHARED_STATE_REFRESH_MS = 10000;
+const FEEDBACK_GOOGLE_SHEET_ID = '1rT4mlBtaJyTA4pXqDlIo5dn7mPcv8MLAGolVtSi8oNE';
 const SHARED_UPDATES_JSON_URL = 'assets/data/latest-updates.json';
 const SPOTIFY_PLAYLIST_URI = 'spotify:playlist:0ni59E9HbWpAe8Ydnseh4O';
 const DATA = [
@@ -3817,11 +3887,91 @@ function parseSharedLiveStatusesPayload(payload) {
 }
 
 function parseJsonSharedStatePayload(payload) {
-  if (!payload || typeof payload !== 'object') return { updates: [], liveStatuses: { running: null, coding: null } };
+  if (!payload || typeof payload !== 'object') return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
   return {
     updates: parseSharedUpdatesPayload(payload),
+    feedback: parseSharedFeedbackPayload(payload),
     liveStatuses: parseSharedLiveStatusesPayload(payload),
   };
+}
+
+function normalizeFeedbackItem(item) {
+  const message = String(item?.message || '').trim();
+  if (!message) return null;
+  const createdAt = String(item?.createdAt || new Date().toISOString());
+  const username = String(item?.username || '').trim().slice(0, 60);
+  return {
+    id: String(item?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
+    message,
+    username,
+    includeUsername: Boolean(item?.includeUsername && username),
+    aiTopic: String(item?.aiTopic || 'general'),
+    aiPriority: String(item?.aiPriority || 'normal'),
+    createdAt,
+  };
+}
+
+function parseSharedFeedbackPayload(payload) {
+  const rawUpdates = getSharedUpdatesArray(payload);
+  const meta = rawUpdates.find(isSharedFeedbackMetaItem);
+  const metaItems = Array.isArray(meta?.feedback) ? meta.feedback : [];
+  const directItems = payload && Array.isArray(payload.feedback) ? payload.feedback : [];
+  return mergeFeedbackItems(metaItems, directItems);
+}
+
+function mergeFeedbackItems(...groups) {
+  const merged = [];
+  const seen = new Set();
+  groups.flat().forEach(item => {
+    const normalized = normalizeFeedbackItem(item);
+    if (!normalized) return;
+    const key = normalized.id || `${normalized.createdAt}::${normalized.username}::${normalized.message}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(normalized);
+  });
+  return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+function getFeedback() {
+  try {
+    const items = JSON.parse(localStorage.getItem(ADMIN_FEEDBACK_KEY) || '[]');
+    return Array.isArray(items) ? mergeFeedbackItems(items) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setFeedback(items) {
+  localStorage.setItem(ADMIN_FEEDBACK_KEY, JSON.stringify(mergeFeedbackItems(items)));
+}
+
+function buildSharedUpdatesPayload(items, liveStatuses = { running: false, coding: false }, feedbackItems = []) {
+  const visibleItems = Array.isArray(items) ? items.filter(item => !isSharedStatusMetaItem(item) && !isSharedFeedbackMetaItem(item)) : [];
+  return [
+    ...visibleItems,
+    {
+      id: SHARED_STATUS_META_ID,
+      title: '__live_status_meta__',
+      body: '__live_status_meta__',
+      createdAt: new Date().toISOString(),
+      archived: true,
+      source: 'system',
+      liveStatuses: {
+        running: Boolean(liveStatuses.running),
+        coding: Boolean(liveStatuses.coding),
+      },
+    },
+    {
+      id: SHARED_FEEDBACK_META_ID,
+      title: '__feedback_meta__',
+      body: '__feedback_meta__',
+      createdAt: new Date().toISOString(),
+      archived: true,
+      source: 'system',
+      feedback: mergeFeedbackItems(feedbackItems),
+    },
+  ];
 }
 
 async function parseSupabaseError(response) {
@@ -3895,7 +4045,7 @@ async function syncFeedbackToBackend(items) {
 }
 
 async function loadSharedStateFromBackend() {
-  if (!isSupabaseConfigured()) return { updates: [], liveStatuses: { running: null, coding: null } };
+  if (!isSupabaseConfigured()) return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
   try {
     const qs = new URLSearchParams({
       select: 'updates,live_status_enabled',
@@ -3910,28 +4060,29 @@ async function loadSharedStateFromBackend() {
     });
     if (!response.ok) {
       console.warn('Shared sync read failed on homepage:', await parseSupabaseError(response));
-      return { updates: [], liveStatuses: { running: null, coding: null } };
+      return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
     }
     const json = await response.json();
     const payload = Array.isArray(json) ? json[0] : json;
     return {
       updates: parseSharedUpdatesPayload(payload),
+      feedback: parseSharedFeedbackPayload(payload),
       liveStatuses: parseSharedLiveStatusesPayload(payload),
     };
   } catch {
-    return { updates: [], liveStatuses: { running: null, coding: null } };
+    return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
   }
 }
 
 async function loadSharedStateFromJsonEndpoint() {
-  if (!SHARED_UPDATES_JSON_URL) return { updates: [], liveStatuses: { running: null, coding: null } };
+  if (!SHARED_UPDATES_JSON_URL) return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
   try {
     const response = await fetch(`${SHARED_UPDATES_JSON_URL}?v=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) return { updates: [], liveStatuses: { running: null, coding: null } };
+    if (!response.ok) return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
     const payload = await response.json();
     return parseJsonSharedStatePayload(payload);
   } catch {
-    return { updates: [], liveStatuses: { running: null, coding: null } };
+    return { updates: [], feedback: [], liveStatuses: { running: null, coding: null } };
   }
 }
 
@@ -3945,6 +4096,7 @@ async function loadSharedState() {
       ...(Array.isArray(supabaseState.updates) ? supabaseState.updates : []),
       ...(Array.isArray(jsonState.updates) ? jsonState.updates : []),
     ],
+    feedback: mergeFeedbackItems(supabaseState.feedback, jsonState.feedback),
     liveStatuses: {
       running:
         typeof supabaseState.liveStatuses?.running === 'boolean'
@@ -4007,7 +4159,90 @@ async function refreshSharedStateFromBackend() {
   await loadCustomUpdates(sharedState);
 }
 
+function toggleFeedbackUsername(shouldFocus = true) {
+  const checkbox = document.getElementById('feedback-allow-username');
+  const wrap = document.getElementById('feedback-username-wrap');
+  const input = document.getElementById('feedback-username');
+  if (!checkbox || !wrap || !input) return;
+  const enabled = Boolean(checkbox.checked);
+  wrap.hidden = !enabled;
+  localStorage.setItem(FEEDBACK_ALLOW_USERNAME_KEY, enabled ? '1' : '0');
+  if (!enabled) {
+    input.value = '';
+    localStorage.removeItem(FEEDBACK_USERNAME_KEY);
+  } else if (shouldFocus) {
+    input.focus();
+  }
+}
 
+function initializeFeedbackIdentity() {
+  const checkbox = document.getElementById('feedback-allow-username');
+  const input = document.getElementById('feedback-username');
+  if (!checkbox || !input) return;
+  checkbox.checked = localStorage.getItem(FEEDBACK_ALLOW_USERNAME_KEY) === '1';
+  input.value = localStorage.getItem(FEEDBACK_USERNAME_KEY) || '';
+  toggleFeedbackUsername(false);
+  input.addEventListener('input', () => {
+    const username = input.value.trim();
+    if (username) localStorage.setItem(FEEDBACK_USERNAME_KEY, username);
+    else localStorage.removeItem(FEEDBACK_USERNAME_KEY);
+  });
+}
+
+async function syncFeedbackToBackend(feedbackItems, sharedStateOverride = null) {
+  if (!isSupabaseConfigured()) return false;
+  const sharedState = sharedStateOverride || await loadSharedStateFromBackend();
+  const payload = {
+    id: SUPABASE_ROW_ID,
+    updates: buildSharedUpdatesPayload(
+      Array.isArray(sharedState.updates) ? sharedState.updates : [],
+      sharedState.liveStatuses || { running: false, coding: false },
+      feedbackItems
+    ),
+    live_status_enabled: Boolean(sharedState.liveStatuses?.running),
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify([payload]),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function pushFeedbackToGoogleSheets(item) {
+  if (!FEEDBACK_SHEET_WEBHOOK_URL) return null;
+  const body = new URLSearchParams({
+    sheetId: FEEDBACK_GOOGLE_SHEET_ID,
+    username: item.includeUsername ? item.username : '',
+    dateTime: item.createdAt,
+    message: item.message,
+    aiTopic: item.aiTopic,
+    aiPriority: item.aiPriority,
+  });
+  try {
+    await fetch(FEEDBACK_SHEET_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body: body.toString(),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
 function classifyFeedback(message) {
   const text = message.toLowerCase();
   let topic = 'general';
@@ -4019,94 +4254,59 @@ function classifyFeedback(message) {
   return { topic, priority };
 }
 
-
-async function syncFeedbackToGoogleSheets(entry) {
-  if (!GOOGLE_SHEETS_WEBHOOK_URL) return false;
-  try {
-    const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: entry?.username || '',
-        date: entry?.createdAt || new Date().toISOString(),
-        message: entry?.message || '',
-        aiTopic: entry?.aiTopic || 'general',
-        aiPriority: entry?.aiPriority || 'normal',
-      }),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-
-function toggleFeedbackUsernameInput() {
-  const allow = document.getElementById('feedback-allow-username');
-  const input = document.getElementById('feedback-username');
-  if (!allow || !input) return;
-  input.style.display = allow.checked ? "block" : "none";
-  if (!allow.checked) input.value = "";
-}
-
-function seedFeedbackIfNeeded(items) {
-  if (!Array.isArray(items) || !SEEDED_FEEDBACK_ENTRIES.length) return Array.isArray(items) ? items : [];
-  const existing = new Set(items.map(item => `${String(item.message || "").trim()}::${String(item.createdAt || "").trim()}`));
-  SEEDED_FEEDBACK_ENTRIES.forEach(entry => {
-    const key = `${String(entry.message || "").trim()}::${String(entry.createdAt || "").trim()}`;
-    if (!existing.has(key)) items.push({ ...entry });
-  });
-  return items;
-}
-
 function submitFeedback() {
   const input = document.getElementById('feedback-text');
   const status = document.getElementById('feedback-status');
+  const allowUsername = document.getElementById('feedback-allow-username');
+  const usernameInput = document.getElementById('feedback-username');
   const message = input.value.trim();
   if (!message) {
     status.textContent = 'Please enter feedback before submitting.';
     return;
   }
 
-  const allowUsername = document.getElementById('feedback-allow-username')?.checked;
-  const usernameInput = document.getElementById('feedback-username');
-  const username = allowUsername && usernameInput ? usernameInput.value.trim() : '';
-
-  let items = [];
-  try {
-    items = JSON.parse(localStorage.getItem(ADMIN_FEEDBACK_KEY) || '[]');
-    if (!Array.isArray(items)) items = [];
-  } catch {
-    items = [];
+  const includeUsername = Boolean(allowUsername?.checked);
+  const username = String(usernameInput?.value || '').trim();
+  if (includeUsername && !username) {
+    status.textContent = 'Add a username or turn off the checkbox before submitting.';
+    return;
   }
-  items = seedFeedbackIfNeeded(items);
 
   const ai = classifyFeedback(message);
-  const feedbackEntry = {
+  const feedbackItem = normalizeFeedbackItem({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     message,
+    username,
+    includeUsername,
     aiTopic: ai.topic,
     aiPriority: ai.priority,
-    createdAt: new Date().toISOString(),
-    username,
-  };
-  items.unshift(feedbackEntry);
-  localStorage.setItem(ADMIN_FEEDBACK_KEY, JSON.stringify(items));
+    createdAt: new Date().toISOString()
+  });
+  const localItems = mergeFeedbackItems([feedbackItem], getFeedback());
+  setFeedback(localItems);
 
   input.value = '';
-  if (usernameInput) usernameInput.value = '';
-  const allowBox = document.getElementById('feedback-allow-username');
-  if (allowBox) allowBox.checked = false;
-  toggleFeedbackUsernameInput();
-  status.textContent = `Feedback sent to admin system (${ai.topic}, ${ai.priority} priority).`;
+  if (includeUsername) {
+    localStorage.setItem(FEEDBACK_USERNAME_KEY, username);
+  }
+  status.textContent = 'Sending feedback...';
 
-  Promise.all([
-    syncFeedbackToBackend(items),
-    syncFeedbackToGoogleSheets(feedbackEntry),
-  ]).then(([supabaseSynced, sheetsSynced]) => {
-    if (!supabaseSynced) {
-      status.textContent += ' Saved on this device only (shared sync failed).';
-    }
-    if (GOOGLE_SHEETS_WEBHOOK_URL && !sheetsSynced) {
-      status.textContent += ' Google Sheets sync failed.';
+  Promise.allSettled([
+    loadSharedStateFromBackend().then(sharedState => {
+      const mergedFeedback = mergeFeedbackItems([feedbackItem], sharedState.feedback, localItems);
+      setFeedback(mergedFeedback);
+      return syncFeedbackToBackend(mergedFeedback, sharedState);
+    }),
+    pushFeedbackToGoogleSheets(feedbackItem),
+  ]).then(results => {
+    const sharedSyncOk = results[0].status === 'fulfilled' ? results[0].value : false;
+    const sheetSyncState = results[1].status === 'fulfilled' ? results[1].value : false;
+    if (sharedSyncOk && sheetSyncState === true) {
+      status.textContent = `Feedback saved to admin system and Google Sheet (${ai.topic}, ${ai.priority} priority).`;
+    } else if (sharedSyncOk) {
+      status.textContent = `Feedback saved to admin system (${ai.topic}, ${ai.priority} priority). Google Sheet sync is not configured yet.`;
+    } else {
+      status.textContent = `Feedback saved on this device (${ai.topic}, ${ai.priority} priority). Shared sync needs attention.`;
     }
   });
 }
@@ -4498,7 +4698,7 @@ document.getElementById('admin-pass').addEventListener('keydown', e => {
   if (e.key === 'Enter') goToAdmin();
 });
 
-initMap(); buildTabs(); updateStaticStats(); renderPins(); renderList(); initPanelResizer(); syncSidebarWidthForViewport(); syncSidebarTrackerForViewport(); loadCustomUpdates(); renderStickerCollage(); removeDuplicateFoundStickerSections(); setupAnimationShowcase(); setupLivePosterCountdown();
+initMap(); buildTabs(); updateStaticStats(); renderPins(); renderList(); initPanelResizer(); syncSidebarWidthForViewport(); syncSidebarTrackerForViewport(); loadCustomUpdates(); renderStickerCollage(); removeDuplicateFoundStickerSections(); setupAnimationShowcase(); setupLivePosterCountdown(); initializeFeedbackIdentity();
 if (isSupabaseConfigured()) {
   window.setInterval(refreshSharedStateFromBackend, SUPABASE_SHARED_STATE_REFRESH_MS);
 }

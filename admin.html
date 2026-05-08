@@ -58,6 +58,9 @@
       padding: 10px;
       margin-top: 8px;
     }
+    .preview .item p {
+      margin-bottom: 0;
+    }
     .formatted-update-body p {
       margin: 10px 0 0;
     }
@@ -371,17 +374,47 @@
       };
     }
 
-    function getFeedbackItemsForSync() {
-      return getFeedback().filter(item => item && typeof item === 'object' && String(item.message || '').trim()).map(item => ({
-        message: String(item.message || '').trim(),
-        aiTopic: String(item.aiTopic || 'general').trim(),
-        aiPriority: String(item.aiPriority || 'normal').trim(),
-        createdAt: item.createdAt || new Date().toISOString(),
-        username: String(item.username || '').trim(),
-      }));
+    function normalizeFeedbackItem(item) {
+      const rawMessage = String(item?.rawMessage || item?.message || '').trim();
+      if (!rawMessage) return null;
+      const createdAt = String(item?.createdAt || new Date().toISOString());
+      const username = String(item?.username || '').trim().slice(0, 60);
+      const includeUsername = Boolean(item?.includeUsername && username);
+      return {
+        id: String(item?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
+        rawMessage,
+        message: includeUsername ? `[Username: ${username}] ${rawMessage}` : rawMessage,
+        username,
+        includeUsername,
+        aiTopic: String(item?.aiTopic || 'general'),
+        aiPriority: String(item?.aiPriority || 'normal'),
+        createdAt,
+      };
     }
 
-    function buildSharedUpdatesPayload(items, liveStatuses = getCurrentLiveStatuses()) {
+    function mergeFeedbackItems(...groups) {
+      const merged = [];
+      const seen = new Set();
+      groups.flat().forEach(item => {
+        const normalized = normalizeFeedbackItem(item);
+        if (!normalized) return;
+        const key = normalized.id || `${normalized.createdAt}::${normalized.username}::${normalized.message}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(normalized);
+      });
+      return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    function parseFeedbackPayload(payload) {
+      const rawUpdates = getSharedUpdatesArray(payload);
+      const meta = rawUpdates.find(isSharedFeedbackMetaItem);
+      const metaItems = Array.isArray(meta?.feedback) ? meta.feedback : [];
+      const directItems = payload && Array.isArray(payload.feedback) ? payload.feedback : [];
+      return mergeFeedbackItems(metaItems, directItems);
+    }
+
+    function buildSharedUpdatesPayload(items, liveStatuses = getCurrentLiveStatuses(), feedbackItems = getFeedback()) {
       const visibleItems = Array.isArray(items) ? items.filter(item => !isSharedStatusMetaItem(item) && !isSharedFeedbackMetaItem(item)) : [];
       return [
         ...visibleItems,
@@ -404,7 +437,10 @@
           createdAt: new Date().toISOString(),
           archived: true,
           source: 'system',
-          items: getFeedbackItemsForSync(),
+          feedback: mergeFeedbackItems(feedbackItems).map(item => ({
+            ...item,
+            message: item.rawMessage || item.message,
+          })),
         },
       ];
     }
@@ -458,6 +494,7 @@
         const json = await response.json();
         const payload = Array.isArray(json) ? json[0] : json;
         const updates = parseUpdatesPayload(payload);
+        const feedback = parseFeedbackPayload(payload);
         const liveStatuses = parseLiveStatusesPayload(payload);
         if (typeof liveStatuses.running === 'boolean') {
           writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, liveStatuses.running, LEGACY_LIVE_STATUS_KEY);
@@ -466,8 +503,9 @@
           writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, liveStatuses.coding);
         }
         renderLiveStatusState();
+        localStorage.setItem(FEEDBACK_KEY, JSON.stringify(feedback));
         status.textContent = `Shared updates loaded (${updates.length} items).`;
-        return updates;
+        return { updates, feedback };
       } catch (err) {
         status.textContent = `Shared sync read failed: ${err.message}`;
         return null;
@@ -480,7 +518,7 @@
       const liveStatuses = getCurrentLiveStatuses();
       const payload = {
         id: SUPABASE_ROW_ID,
-        updates: buildSharedUpdatesPayload(items, liveStatuses),
+        updates: buildSharedUpdatesPayload(items, liveStatuses, getFeedback()),
         live_status_enabled: liveStatuses.running,
         updated_at: new Date().toISOString(),
       };
@@ -507,7 +545,7 @@
       const status = document.getElementById('sync-state');
       const payload = {
         id: SUPABASE_ROW_ID,
-        updates: buildSharedUpdatesPayload(ensureSeededUpdates(), liveStatuses),
+        updates: buildSharedUpdatesPayload(ensureSeededUpdates(), liveStatuses, getFeedback()),
         live_status_enabled: Boolean(liveStatuses.running),
         updated_at: new Date().toISOString(),
       };
@@ -556,6 +594,7 @@
           const json = await response.json();
           const payload = Array.isArray(json) ? json[0] : json;
           const updates = parseUpdatesPayload(payload);
+          const feedback = parseFeedbackPayload(payload);
           const liveStatuses = parseLiveStatusesPayload(payload);
           if (typeof liveStatuses.running === 'boolean') {
             writeStoredLiveStatus(LIVE_RUNNING_STATUS_KEY, liveStatuses.running, LEGACY_LIVE_STATUS_KEY);
@@ -564,8 +603,9 @@
             writeStoredLiveStatus(LIVE_CODING_STATUS_KEY, liveStatuses.coding);
           }
           renderLiveStatusState();
+          localStorage.setItem(FEEDBACK_KEY, JSON.stringify(feedback));
           if (status) status.textContent = `Shared updates loaded (${updates.length} items).`;
-          return updates;
+          return { updates, feedback };
         }
       } catch (err) {
         lastError = err instanceof Error ? err.message : String(err);
@@ -583,7 +623,7 @@
       const liveStatuses = getCurrentLiveStatuses();
       const payload = {
         id: SUPABASE_ROW_ID,
-        updates: buildSharedUpdatesPayload(items, liveStatuses),
+        updates: buildSharedUpdatesPayload(items, liveStatuses, getFeedback()),
         live_status_enabled: liveStatuses.running,
         updated_at: new Date().toISOString(),
       };
@@ -811,7 +851,7 @@
     function getFeedback() {
       try {
         const items = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || '[]');
-        return Array.isArray(items) ? items : [];
+        return Array.isArray(items) ? mergeFeedbackItems(items) : [];
       } catch {
         return [];
       }
@@ -834,19 +874,10 @@
       if (!confirm('Clear all feedback submissions?')) return;
       localStorage.setItem(FEEDBACK_KEY, '[]');
       renderFeedback();
-      if (!isSupabaseConfigured()) return;
-      try {
-        const payload = {
-          id: SUPABASE_ROW_ID,
-          updates: buildSharedUpdatesPayload(ensureSeededUpdates()),
-          updated_at: new Date().toISOString(),
-        };
-        await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
-          method: 'POST',
-          headers: { ...supabaseHeaders(), Prefer: 'resolution=merge-duplicates,return=minimal' },
-          body: JSON.stringify([payload]),
-        });
-      } catch {}
+      const synced = await syncUpdatesToBackend(getUpdates().map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean));
+      if (!synced) {
+        alert(`Feedback cleared on this device, but shared sync failed.\n\n${getSyncStatusText() || 'No sync status available.'}`);
+      }
     }
 
     function renderLiveStatusState() {
@@ -891,12 +922,13 @@
 
     (async () => {
       const remote = await loadSharedAdminUpdates();
-      if (Array.isArray(remote)) {
+      if (remote && Array.isArray(remote.updates)) {
         const merged = mergeUpdatesForAdmin(
-          remote,
+          remote.updates,
           getUpdates().map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean)
         );
         setUpdates(merged, { skipPush: true });
+        localStorage.setItem(FEEDBACK_KEY, JSON.stringify(mergeFeedbackItems(remote.feedback, getFeedback())));
       } else if (!isSupabaseConfigured()) {
         const status = document.getElementById('sync-state');
         if (status) status.textContent = 'Shared sync is disabled. Replace SUPABASE_ANON_KEY placeholder with your real Supabase anon key to enable cross-device updates.';
@@ -912,13 +944,15 @@
       if (isSupabaseConfigured()) {
         window.setInterval(async () => {
           const latestRemote = await loadSharedAdminUpdates();
-          if (Array.isArray(latestRemote)) {
+          if (latestRemote && Array.isArray(latestRemote.updates)) {
             const merged = mergeUpdatesForAdmin(
-              latestRemote,
+              latestRemote.updates,
               getUpdates().map(item => normalizeUpdate(item, item?.source || 'custom')).filter(Boolean)
             );
             setUpdates(merged, { skipPush: true });
+            localStorage.setItem(FEEDBACK_KEY, JSON.stringify(mergeFeedbackItems(latestRemote.feedback, getFeedback())));
             renderUpdates();
+            renderFeedback();
           }
         }, LIVE_STATUS_SYNC_POLL_MS);
       }
