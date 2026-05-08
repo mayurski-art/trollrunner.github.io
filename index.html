@@ -2698,7 +2698,7 @@ footer a:hover { color: #fff; }
         <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;opacity:0.9;">
           <input type="checkbox" id="feedback-allow-username" onchange="toggleFeedbackUsernameInput()"> Allow username
         </label>
-        <input id="feedback-username" class="feedback-field" style="display:none;margin-top:6px;" maxlength="40" placeholder="Username (optional)">
+        <input id="feedback-username" class="feedback-field" style="display:none;margin-top:6px;max-width:220px;padding:6px 8px;font-size:12px;line-height:1.2;" maxlength="40" placeholder="Username (optional)">
         <div class="feedback-actions">
           <button class="feedback-btn" onclick="submitFeedback()">Submit feedback</button>
           <span id="feedback-status" class="feedback-status"></span>
