@@ -2695,6 +2695,10 @@ footer a:hover { color: #fff; }
       <div class="feedback-card-content">
         <p>Thank you for using this website. Feel free to tell us what you love, any potential bugs, and improvements!</p>
         <textarea id="feedback-text" class="feedback-field" placeholder="Keyboard troll here..."></textarea>
+        <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;opacity:0.9;">
+          <input type="checkbox" id="feedback-allow-username" onchange="toggleFeedbackUsernameInput()"> Allow username
+        </label>
+        <input id="feedback-username" class="feedback-field" style="display:none;margin-top:6px;max-width:220px;padding:6px 8px;font-size:12px;line-height:1.2;" maxlength="40" placeholder="Username (optional)">
         <div class="feedback-actions">
           <button class="feedback-btn" onclick="submitFeedback()">Submit feedback</button>
           <span id="feedback-status" class="feedback-status"></span>
@@ -2761,12 +2765,22 @@ const ADMIN_PASSWORD = '#Mayur2626';
 const ADMIN_UPDATES_KEY = 'trollrunner_updates';
 const ADMIN_FEEDBACK_KEY = 'trollrunner_feedback';
 const SHARED_FEEDBACK_META_ID = '__trollrunner_feedback_meta__';
+const GOOGLE_SHEETS_WEBHOOK_URL = '';
 const GEO_CACHE_KEY = 'trollrunner_geo_cache_v1';
 const MAX_VISIBLE_UPDATES = 4;
 const SUPABASE_URL = 'https://tjsyhfplxjtakdfkpdtg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRqc3loZnBseGp0YWtkZmtwZHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTc0ODksImV4cCI6MjA5MTk3MzQ4OX0.xLUcPUUguRBQttNwiIRWJHxjJjLqrQDMu4Ubsk5yZoQ';
 const SUPABASE_ANON_KEY_PLACEHOLDER = 'your_anon_public_key';
 const SUPABASE_TABLE = 'site_updates';
+const SEEDED_FEEDBACK_ENTRIES = [
+  {
+    username: '',
+    message: 'I really love the dedication and the determination to play a part in the community and set themselves aside from just a regular community member and actually put forth hard work to show just how dedicated they are',
+    aiTopic: 'positive',
+    aiPriority: 'normal',
+    createdAt: '2026-05-08T08:33:03.000Z',
+  },
+];
 const SUPABASE_ROW_ID = 'main';
 const SUPABASE_SHARED_STATE_REFRESH_MS = 10000;
 const SHARED_UPDATES_JSON_URL = 'assets/data/latest-updates.json';
@@ -4000,6 +4014,45 @@ function classifyFeedback(message) {
   return { topic, priority };
 }
 
+
+async function syncFeedbackToGoogleSheets(entry) {
+  if (!GOOGLE_SHEETS_WEBHOOK_URL) return false;
+  try {
+    const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: entry?.username || '',
+        date: entry?.createdAt || new Date().toISOString(),
+        message: entry?.message || '',
+        aiTopic: entry?.aiTopic || 'general',
+        aiPriority: entry?.aiPriority || 'normal',
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function toggleFeedbackUsernameInput() {
+  const allow = document.getElementById('feedback-allow-username');
+  const input = document.getElementById('feedback-username');
+  if (!allow || !input) return;
+  input.style.display = allow.checked ? "block" : "none";
+  if (!allow.checked) input.value = "";
+}
+
+function seedFeedbackIfNeeded(items) {
+  if (!Array.isArray(items) || !SEEDED_FEEDBACK_ENTRIES.length) return Array.isArray(items) ? items : [];
+  const existing = new Set(items.map(item => `${String(item.message || "").trim()}::${String(item.createdAt || "").trim()}`));
+  SEEDED_FEEDBACK_ENTRIES.forEach(entry => {
+    const key = `${String(entry.message || "").trim()}::${String(entry.createdAt || "").trim()}`;
+    if (!existing.has(key)) items.push({ ...entry });
+  });
+  return items;
+}
+
 function submitFeedback() {
   const input = document.getElementById('feedback-text');
   const status = document.getElementById('feedback-status');
@@ -4009,6 +4062,10 @@ function submitFeedback() {
     return;
   }
 
+  const allowUsername = document.getElementById('feedback-allow-username')?.checked;
+  const usernameInput = document.getElementById('feedback-username');
+  const username = allowUsername && usernameInput ? usernameInput.value.trim() : '';
+
   let items = [];
   try {
     items = JSON.parse(localStorage.getItem(ADMIN_FEEDBACK_KEY) || '[]');
@@ -4016,22 +4073,35 @@ function submitFeedback() {
   } catch {
     items = [];
   }
+  items = seedFeedbackIfNeeded(items);
 
   const ai = classifyFeedback(message);
-  items.unshift({
+  const feedbackEntry = {
     message,
     aiTopic: ai.topic,
     aiPriority: ai.priority,
-    createdAt: new Date().toISOString()
-  });
+    createdAt: new Date().toISOString(),
+    username,
+  };
+  items.unshift(feedbackEntry);
   localStorage.setItem(ADMIN_FEEDBACK_KEY, JSON.stringify(items));
 
   input.value = '';
+  if (usernameInput) usernameInput.value = '';
+  const allowBox = document.getElementById('feedback-allow-username');
+  if (allowBox) allowBox.checked = false;
+  toggleFeedbackUsernameInput();
   status.textContent = `Feedback sent to admin system (${ai.topic}, ${ai.priority} priority).`;
 
-  syncFeedbackToBackend(items).then(synced => {
-    if (!synced) {
+  Promise.all([
+    syncFeedbackToBackend(items),
+    syncFeedbackToGoogleSheets(feedbackEntry),
+  ]).then(([supabaseSynced, sheetsSynced]) => {
+    if (!supabaseSynced) {
       status.textContent += ' Saved on this device only (shared sync failed).';
+    }
+    if (GOOGLE_SHEETS_WEBHOOK_URL && !sheetsSynced) {
+      status.textContent += ' Google Sheets sync failed.';
     }
   });
 }
